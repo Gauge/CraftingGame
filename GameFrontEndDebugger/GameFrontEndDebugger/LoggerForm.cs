@@ -3,9 +3,9 @@ using System.Windows.Forms;
 
 namespace GameFrontEndDebugger
 {
-    public partial class Logger : Form
+    public partial class LoggerForm : Form
     {
-        public Logger() {
+        public LoggerForm() {
             InitializeComponent();
         }
 

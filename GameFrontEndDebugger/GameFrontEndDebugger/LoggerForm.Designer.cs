@@ -1,6 +1,6 @@
 ﻿namespace GameFrontEndDebugger
 {
-    partial class Logger
+    partial class LoggerForm
     {
         /// <summary>
         /// Required designer variable.

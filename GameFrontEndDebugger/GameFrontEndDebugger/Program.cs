@@ -16,7 +16,7 @@ namespace GameFrontEndDebugger
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new GameApplication());
+            Application.Run(new GameForm());
         }
     }
 }

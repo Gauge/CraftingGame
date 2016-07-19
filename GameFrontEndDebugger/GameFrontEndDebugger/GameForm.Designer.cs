@@ -1,6 +1,6 @@
 ﻿namespace GameFrontEndDebugger
 {
-    partial class GameApplication
+    partial class GameForm
     {
         /// <summary>
         /// Required designer variable.
@@ -70,11 +70,10 @@
             // 
             // pingger
             // 
-            this.pingger.Enabled = true;
             this.pingger.Interval = 1000;
             this.pingger.Tick += new System.EventHandler(this.pingger_Tick);
             // 
-            // GameApplication
+            // GameForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -82,7 +81,7 @@
             this.Controls.Add(this.gameCanvas);
             this.Controls.Add(this.chatDisplay);
             this.Controls.Add(this.chatInput);
-            this.Name = "GameApplication";
+            this.Name = "GameForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Game Debugger";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.GameApplication_FormClosed);

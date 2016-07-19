@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Threading;
 
-namespace GameServer {
+namespace GameServer.Networking {
     public class Server {
 
         private int _port;

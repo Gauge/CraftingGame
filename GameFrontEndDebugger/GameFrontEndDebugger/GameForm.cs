@@ -3,16 +3,17 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using GameServer;
-using System.Text;
+using GameServer.Networking;
+using Message = GameServer.Networking.Message;
 using System.Reflection;
+using System.Text;
 
-namespace GameFrontEndDebugger
-{
-    public partial class GameApplication : Form {
+namespace GameFrontEndDebugger {
+    public partial class GameForm : Form {
 
         public int UNIT = 10;
 
-        private int _userID = -1;
+        private int _id = -1;
         private string _username;
         private bool _isKeyPressed = false;
         private long _lastTime;
@@ -20,16 +21,16 @@ namespace GameFrontEndDebugger
 
         private Client _client;
         private Game _game;
-        private Login _loginForm;
-        private Logger _logger;
+        private LoginForm _loginForm;
+        private LoggerForm _logger;
         
-        public GameApplication() {
+        public GameForm() {
             InitializeComponent();
         }
 
         private void connectToServer() {
             if (!_loginForm.Visible) {
-                _userID = -1;
+                _id = -1;
                 gameCanvas.BackgroundImage = null;
                 _loginForm.Show(this);
             }
@@ -41,13 +42,13 @@ namespace GameFrontEndDebugger
             _client.Port = port;
             _client.Start();
 
-            sendMessage(Communication.login(username));
+            sendMessage(new Login(username).toByteArray());
         }
 
         public void dissconnect() {
             _logger.Log("disconnecting from server...");
             _client.Stop();
-            _userID = -1;
+            _id = -1;
             _username = "";
             _game = new Game();
         }
@@ -55,8 +56,8 @@ namespace GameFrontEndDebugger
         private void Form1_Load(object sender, EventArgs e) {
             typeof(Panel).InvokeMember("DoubleBuffered", BindingFlags.SetProperty | BindingFlags.Instance | BindingFlags.NonPublic, null, gameCanvas, new object[] { true });
 
-            _loginForm = new Login();
-            _logger = new Logger();
+            _loginForm = new LoginForm();
+            _logger = new LoggerForm();
             _game = new Game();
             _client = new Client();
 
@@ -65,7 +66,7 @@ namespace GameFrontEndDebugger
         }
 
         private void GameApplication_FormClosed(object sender, FormClosedEventArgs e) {
-            sendMessage(Communication.logout());
+            sendMessage(new Logout().toByteArray());
             _client.Stop();
             Environment.Exit(0);
         }
@@ -78,67 +79,51 @@ namespace GameFrontEndDebugger
             }
 
             if ((e.KeyCode == Keys.Up || e.KeyCode == Keys.Down || e.KeyCode == Keys.Left || e.KeyCode == Keys.Right) && _isKeyPressed == false) {
-                Communication message = new Communication();
-                message.type = ComType.MOVE;
-                message.username = _username;
-
+            
                 Direction dir;
                 if (e.KeyCode == Keys.Left) {
-                    dir = Direction.LEFT;
+                    dir = Direction.Left;
                 } else if (e.KeyCode == Keys.Right) {
-                    dir = Direction.RIGHT;
+                    dir = Direction.Right;
                 } else if (e.KeyCode == Keys.Up) {
-                    dir = Direction.UP;
+                    dir = Direction.Up;
                 } else {
-                    dir = Direction.DOWN;
+                    dir = Direction.Down;
                 }
+                _game.setPlayerMove(_id, dir, false);
 
-                Move m = new Move(_userID, dir, false);
-                message.moveAction = m;
-                _game.setPlayerMove(m);
-
-                sendMessage(message);
+                sendMessage(new Move(_id, dir, false).toByteArray());
                 _isKeyPressed = true;
             }
         }
 
         private void GameApplication_KeyUp(object sender, KeyEventArgs e) {
             if (e.KeyCode == Keys.Up || e.KeyCode == Keys.Down || e.KeyCode == Keys.Left || e.KeyCode == Keys.Right) {
-                Communication message = new Communication();
-                message.type = ComType.MOVE;
-                message.username = _username;
-
                 Direction dir;
                 if (e.KeyCode == Keys.Left) {
-                    dir = Direction.LEFT;
+                    dir = Direction.Left;
                 } else if (e.KeyCode == Keys.Right) {
-                    dir = Direction.RIGHT;
+                    dir = Direction.Right;
                 } else if (e.KeyCode == Keys.Up) {
-                    dir = Direction.UP;
+                    dir = Direction.Up;
                 } else {
-                    dir = Direction.DOWN;
+                    dir = Direction.Down;
                 }
+                _game.setPlayerMove(_id, dir, true);
 
-                Move m = new Move(_userID, dir, true);
-                message.moveAction = m;
-                _game.setPlayerMove(m);
-
-                sendMessage(message);
+                sendMessage(new Move(_id, dir, true).toByteArray());
                 _isKeyPressed = false;
             }
         }
 
         private void chatInput_KeyDown(object sender, KeyEventArgs e) {
             if (e.KeyCode == Keys.Return || e.KeyCode == Keys.Enter) {
-                Chat chat = new Chat(chatInput.Text);
-                Communication com = new Communication();
-                com.type = ComType.CHAT;
-                com.username = _username;
-                com.chat = chat;
-                sendMessage(com);
+
+                Chat chat = new Chat(_id, _username ,chatInput.Text);
+                sendMessage(chat.toByteArray());
 
                 string data = "";
-                if (chat.type == ChatType.Wisper) {
+                if (chat.chatType == ChatType.Wisper) {
                     data += "[To] " + chat.recipient + ": ";
                 } else {
                     data += "[Me] ";
@@ -152,60 +137,86 @@ namespace GameFrontEndDebugger
             }
         }
 
-        private void HandleServerMessages() {
-            List<GameServer.Message> messages = _client.PendingMessages;
+        private void serverLogin(Login com) {
+            if (com.player == null) return;
+            _game.addPlayer(com.player);
+        }
 
-            foreach (GameServer.Message m in messages) {
-                Communication com = Communication.fromByteArray(m.data);
-                if (com.type != ComType.PING) _logger.Log(com.ToString());
+        private void serverLogout(Logout com) {
+            if (com.id == _id || com.id == -1) {
+                dissconnect();
+            }
+            _game.removePlayer(com.id);
+        }
+
+        private void serverLoadGame(LoadGame com) {
+            _game.loadPlayers(com.players);
+            _id = com.id;
+        }
+
+        private void serverMove(Move com) {
+            if (com.x != 0 && com.y != 0) {
+                //_logger.Log("Location Offset: " + (_game.getPlayerById(id).x - com.x) + ":" + (_game.getPlayerById(id).y - com.y));
+                _game.setPlayerLocation(com.id, com.x, com.y);
+            }
+            _game.setPlayerMove(com.id, com.direction, com.isComplete);
+        }
+
+        private void serverChat(Chat com) {
+            if (com.id != _id) { 
+
+                string message = "[" + com.chatType.ToString() + "] ";
+                if (com.chatType == ChatType.Global || com.chatType == ChatType.Wisper)
+                {
+                    message += com.sender + ": ";
+                }
+                message += com.message + "\n";
+                chatDisplay.Text += message;
+            }
+        }
+
+        private void serverPing(Ping com) {
+            _ping = (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - com.timestamp;
+        }
+
+        private void HandleServerMessages() {
+            List<Message> messages = _client.PendingMessages;
+
+            foreach (Message m in messages) {
+                BaseCommand com = BaseCommand.fromByteArray(m.data);
+                if (com.type != ComType.Ping) _logger.Log(Encoding.ASCII.GetString(m.data));
 
                 switch (com.type) {
 
-                    case ComType.LOGIN:
-                        _game.addPlayer(com.newPlayer);
+                    case ComType.Login:
+                        serverLogin((Login)com);
                         break;
 
-                    case ComType.LOGOUT:
-                        if (com.playerID == _userID || com.playerID == -1) {
-                            dissconnect();
-                        }
-                        _game.removePlayer(com.playerID);
+                    case ComType.Logout:
+                        serverLogout((Logout)com);
                         break;
 
-                    case ComType.LOAD_GAME:
-                        _game.loadPlayers(com.players);
-                        _userID = com.playerID;
+                    case ComType.LoadGame:
+                        serverLoadGame((LoadGame)com);
                         break;
 
-                    case ComType.MOVE:
-                        int id = _game.getIdByUsername(com.username);
-                        if (com.x != 0 && com.y != 0) {
-                            //_logger.Log("Location Offset: " + (_game.getPlayerById(id).x - com.x) + ":" + (_game.getPlayerById(id).y - com.y));
-                            _game.setPlayerLocation(id, com.x, com.y);
-                        }
-                        _game.setPlayerMove(com.moveAction);
+                    case ComType.Move:
+                        serverMove((Move)com);
                         break;
 
-                    case ComType.CHAT:
-                        if (com.username == _username) break;
-
-                        string message = "[" + com.chat.type.ToString() + "] ";
-                        if (com.chat.type == ChatType.Global || com.chat.type == ChatType.Wisper) {
-                            message += com.username + ": ";
-                        }
-                        message += com.chat.message + "\n";
-                        chatDisplay.Text += message;
+                    case ComType.Chat:
+                        serverChat((Chat)com);
                         break;
 
-                    case ComType.PING:
-                        _ping = (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - com.timestamp;
+                    case ComType.Ping:
+                        serverPing((Ping)com);
                         break;
                 }
             }
         }
 
         private void UpdateCanvas() {
-            if (_userID == -1) return;
+            if (_id == -1) return;
 
             int width = gameCanvas.Width;
             int height = gameCanvas.Height;
@@ -217,7 +228,7 @@ namespace GameFrontEndDebugger
             // create background
             g.FillRectangle(Brushes.Gray, new RectangleF(0, 0, width, height));
 
-            Player activePlayer = _game.getPlayerById(_userID);
+            Player activePlayer = _game.getPlayerById(_id);
 
             int canvasCenter_x = width / 2;
             int canvasCenter_y = height / 2;
@@ -270,7 +281,7 @@ namespace GameFrontEndDebugger
             debugStrings[0] = "Fps: " + (1000 / delta);
             debugStrings[1] = "Ping: " + _ping;
             debugStrings[2] = "Active Players: " + _game.Players.Count;
-            debugStrings[3] = "Location: " +_game.getPlayerById(_userID).x + ":" + _game.getPlayerById(_userID).y;
+            debugStrings[3] = "Location: " +_game.getPlayerById(_id).x + ":" + _game.getPlayerById(_id).y;
 
             for (int i=0; i<debugStrings.Length; i++) {
                 string s = debugStrings[i];
@@ -279,9 +290,9 @@ namespace GameFrontEndDebugger
             }
         }
 
-        private void sendMessage(Communication com) {
+        private void sendMessage(byte[] com) {
             if (_client.IsConnected) {
-                _client.send(Communication.toByteArray(com));
+                _client.send(com);
             }
 
         }
@@ -297,7 +308,7 @@ namespace GameFrontEndDebugger
         }
 
         private void pingger_Tick(object sender, EventArgs e) {
-            sendMessage(Communication.ping());
+            sendMessage(new Ping(_id).toByteArray());
         }
     }
 }

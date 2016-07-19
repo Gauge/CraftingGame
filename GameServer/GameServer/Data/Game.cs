@@ -1,10 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace GameServer {
 
     public class Game {
+
+        private struct Move {
+            public int id;
+            public Direction direction;
+
+            public Move(int id, Direction direction) {
+                this.id = id;
+                this.direction = direction;
+            }
+        }
 
         private List<Player> _players;
         private List<Move> _activeMoves;
@@ -60,28 +69,28 @@ namespace GameServer {
             return -1;
         }
 
-        public void setPlayerMove(Move move) { 
+        public void setPlayerMove(int id, Direction direction, bool isComplete) { 
 
-            Move[] currentMoves = _activeMoves.FindAll(m => m.playerID == move.playerID).ToArray();
+            Move[] currentMoves = _activeMoves.FindAll(m => m.id == id).ToArray();
 
             if (currentMoves.Length > 0) {
 
                 foreach (Move m in currentMoves) {
-                    if (move.isComplete && m.direction == move.direction) {
+                    if (isComplete && m.direction == direction) {
                         _activeMoves.Remove(m);
                     }
 
                     int[] upDown = new int[] { 1, 1, 0, 0 };
                     int[] leftRight = new int[] { 0, 0, 1, 1 };
-                    if (!move.isComplete &&
-                        !(upDown[(int)m.direction] == 1 && upDown[(int)move.direction] == 1) &&
-                        !(leftRight[(int)m.direction] == 1 && leftRight[(int)move.direction] == 1)) {
+                    if (!isComplete &&
+                        !(upDown[(int)m.direction] == 1 && upDown[(int)direction] == 1) &&
+                        !(leftRight[(int)m.direction] == 1 && leftRight[(int)direction] == 1)) {
 
-                        _activeMoves.Add(move);
+                        _activeMoves.Add(new Move(id, direction));
                     }
                 }
-            } else if (!move.isComplete) {
-                _activeMoves.Add(move);
+            } else if (!isComplete) {
+                _activeMoves.Add(new Move(id, direction));
             }
         }
 
@@ -105,24 +114,24 @@ namespace GameServer {
 
             foreach (Move move in _activeMoves) {
 
-                Player p = getPlayerById(move.playerID);
+                Player p = getPlayerById(move.id);
                 double amountToMove = (((double)(Player.movementSpeed/Player.speedPerUnit) * (double)delta) / 1000);
 
                 switch (move.direction) {
 
-                    case Direction.UP:
+                    case Direction.Up:
                         p.y -= amountToMove;
                         break;
 
-                    case Direction.DOWN:
+                    case Direction.Down:
                         p.y += amountToMove;
                         break;
 
-                    case Direction.LEFT:
+                    case Direction.Left:
                         p.x -= amountToMove;
                         break;
 
-                    case Direction.RIGHT:
+                    case Direction.Right:
                         p.x += amountToMove;
                         break;
                 }
@@ -136,7 +145,7 @@ namespace GameServer {
                     Console.WriteLine("Removing player: " + Players[userId].username);
                     if (userId >= 0 && userId <= _players.Count) {
                         _players.RemoveAt(userId);
-                        List<Move> moves = _activeMoves.FindAll(p => p.playerID == userId);
+                        List<Move> moves = _activeMoves.FindAll(m => m.id == userId);
 
                         foreach (Move m in moves) {
                             Console.WriteLine("Removing move: " + m.ToString());
