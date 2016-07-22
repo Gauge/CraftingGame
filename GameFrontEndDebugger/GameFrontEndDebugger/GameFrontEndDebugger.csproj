@@ -37,6 +37,12 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>lib\GameServer.dll</HintPath>
     </Reference>
+    <Reference Include="Gma.System.MouseKeyHook">
+      <HintPath>lib\Gma.System.MouseKeyHook.dll</HintPath>
+    </Reference>
+    <Reference Include="Gma.UserActivityMonitor">
+      <HintPath>lib\Gma.UserActivityMonitor.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>lib\Newtonsoft.Json.dll</HintPath>
@@ -54,6 +60,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Controls\ChatDIsplay.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\ChatInput.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\Logger.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="GameForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -105,6 +120,7 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

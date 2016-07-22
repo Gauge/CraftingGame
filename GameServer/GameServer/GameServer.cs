@@ -34,10 +34,18 @@ namespace GameServer {
 			public string name;
 			public IPEndPoint location;
 			public int id;
+			public long lastMessage;
 
-			public User(int id, IPEndPoint location) {
+			public bool TimedOut {
+				get {
+					return (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - lastMessage >= CLIENT_TIMEOUT;
+				}
+			}
+
+			public User(int id, IPEndPoint location, long lastMessage) {
 				this.location = location;
 				this.id = id;
+				this.lastMessage = lastMessage;
 			}
 
 			public static IPEndPoint[] getEndPointArray(List<User> users) {
@@ -48,6 +56,8 @@ namespace GameServer {
 				return endPoints;
 			}
 		}
+
+		public const long CLIENT_TIMEOUT = 120000;
 
 		private List<User> _users;
 		private Server _server;
@@ -76,7 +86,15 @@ namespace GameServer {
 				updateClientRequests();
 				_game.update();
 				sendDataToClients();
+				checkForDissconnects();
 
+			}
+		}
+
+		private void checkForDissconnects() {
+			foreach (User u in _users) {
+				if (u.TimedOut)
+					_toRemove.Add(u);
 			}
 		}
 
@@ -91,21 +109,8 @@ namespace GameServer {
 				}
 				Console.WriteLine("DISSCONECTED\t {0} {1}", user.location, formattedName);
 				_users.Remove(user);
-				_server.removeClientByEndPoint(user.location);
 			}
 			_toRemove.Clear();
-
-			IPEndPoint[] dcClients = _server.DisconnectedClients;
-			foreach (IPEndPoint loc in dcClients) {
-				User dcUser = _users.Find(u => u.location.Equals(loc));
-				if (dcUser != null) {
-					Console.WriteLine("DISSCONECTED\t {0} | {1}", dcUser.location, _game.getPlayerById(dcUser.id).username);
-					_game.removePlayer(dcUser.id);
-					_users.Remove(dcUser);
-					_outGoing.Add(new OutGoing(dcUser.location, new Logout(dcUser.id)));
-
-				}
-			}
 		}
 
 		private void handleClientData() {
@@ -116,7 +121,7 @@ namespace GameServer {
 				try {
 					BaseCommand com = BaseCommand.fromByteArray(m.data);
 					// add new users
-					User temp = new User(-1, m.sender);
+					User temp = new User(-1, m.sender, com.timestamp);
 					if (!_users.Exists(u => u.location.Equals(temp.location))) {
 						_users.Add(temp);
 					}
@@ -134,8 +139,11 @@ namespace GameServer {
 
 			foreach (Message m in _inComing) {
 				int userIndex = _users.FindIndex(u => u.location.Equals(m.sender));
-				User sender = _users[userIndex];
 				BaseCommand com = m.parsed;
+				User sender = _users[userIndex];
+
+				if (com.type != ComType.Ping)
+					sender.lastMessage = com.timestamp;
 
 				if (sender.id == -1 && (com.type != ComType.Login && com.type != ComType.Logout && com.type != ComType.Ping)) {
 					Console.WriteLine("{0} | sent the command: {2} without first logging in", m.sender, com.type.ToString());
