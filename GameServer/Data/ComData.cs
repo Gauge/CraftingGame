@@ -21,12 +21,6 @@ namespace GameServer {
 		public int id { get; set; }
 		public long timestamp { get; }
 
-		public BaseCommand(ComType type, int id) {
-			this.type = type;
-			this.id = id;
-			timestamp = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
-		}
-
 		public BaseCommand(ComType type, int id, long timestamp) {
 			this.type = type;
 			this.id = id;
@@ -57,6 +51,8 @@ namespace GameServer {
 				return null;
 
 			Type t = Type.GetType("GameServer." + comName);
+			Console.WriteLine(t.ToString());
+			Console.WriteLine(data.ToString());
 			MethodInfo[] methods = typeof(JsonConvert).GetMethods(BindingFlags.Public | BindingFlags.Static);
 			// drat... one short of 42. the magic number 41 was found with the commented code below
 			return (BaseCommand)methods[41].MakeGenericMethod(t).Invoke(null, new object[] { data });
@@ -76,12 +72,12 @@ namespace GameServer {
 
 		// client to server
 		[JsonConstructor()]
-		public Login(string username, int id = -1, Player player = null) : base(ComType.Login, id) {
+		public Login(string username, int id = -1, Player player = null, long timestamp = 0) : base(ComType.Login, id, timestamp) {
 			this.username = username;
 			this.player = player;
 		}
 
-		public Login(int id, string username, Player player) : base(ComType.Login, id) {
+		public Login(int id, Player player, long timestamp = 0) : base(ComType.Login, id, timestamp) {
 			this.player = player;
 		}
 
@@ -92,14 +88,14 @@ namespace GameServer {
 
 	public class Logout : BaseCommand {
 		[JsonConstructor()]
-		public Logout(int id = -1) : base(ComType.Logout, id) { }
+		public Logout(int id = -1, long timestamp = 0) : base(ComType.Logout, id, timestamp) { }
 	}
 
 	public class LoadGame : BaseCommand {
 		public List<Player> players { get; set; }
 
 		[JsonConstructor()]
-		public LoadGame(int id, List<Player> players) : base(ComType.LoadGame, id) {
+		public LoadGame(int id, List<Player> players, long timestamp = 0) : base(ComType.LoadGame, id, timestamp) {
 			this.players = players;
 		}
 
@@ -116,19 +112,19 @@ namespace GameServer {
 		public string message { get; set; }
 
 		[JsonConstructor]
-		private Chat(int id = -1, ChatType chatType = ChatType.System, string message = null, string sender = null, string recipient = null) : base(ComType.Chat, id) {
+		private Chat(int id = -1, ChatType chatType = ChatType.System, string message = null, string sender = null, string recipient = null, long timestamp =0) : base(ComType.Chat, id, timestamp) {
 			this.chatType = chatType;
 			this.message = message;
 			this.sender = sender;
 			this.recipient = recipient;
 		}
 
-		public Chat(string message) : base(ComType.Chat, -1) {
+		public Chat(string message, long timestamp = 0) : base(ComType.Chat, -1, timestamp) {
 			chatType = ChatType.System;
 			this.message = message;
 		}
 
-		public Chat(int id, string sender, string message) : base(ComType.Chat, id) {
+		public Chat(int id, string sender, string message, long timestamp = 0) : base(ComType.Chat, id, timestamp) {
 			chatType = ChatType.Global;
 			this.sender = sender;
 			this.message = message;
@@ -138,7 +134,7 @@ namespace GameServer {
 				if (list[0] == "/w" || list[0] == "/whisper") {
 					string m = "";
 					for (int i = 2; i < list.Length; i++) {
-						m += list[i] + " ";
+						m += ((i+1 == list.Length) ? list[i] : list[i] + " ");
 					}
 					chatType = ChatType.Whisper;
 					if (list.Length > 1)
@@ -160,7 +156,7 @@ namespace GameServer {
 		public double y;
 
 		[JsonConstructor]
-		public Move(int id, Direction direction, bool isComplete, double x = 0, double y = 0) : base(ComType.Move, id) {
+		public Move(int id, Direction direction, bool isComplete, double x = 0, double y = 0, long timestamp = 0) : base(ComType.Move, id, timestamp) {
 			this.direction = direction;
 			this.isComplete = isComplete;
 			this.x = x;

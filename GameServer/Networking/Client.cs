@@ -104,7 +104,8 @@ namespace GameServer.Networking {
 		}
 
 		public void send(byte[] data) {
-			_socket.Send(data, data.Length);
+			if (IsConnected)
+				_socket.Send(data, data.Length);
 		}
 	}
 }

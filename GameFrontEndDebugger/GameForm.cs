@@ -7,32 +7,44 @@ using GameServer.Networking;
 using GameFrontEndDebugger.Controls;
 using Message = GameServer.Networking.Message;
 using Logger = GameFrontEndDebugger.Controls.Logger;
-using System.Threading;
+using System.Runtime.InteropServices;
 
 namespace GameFrontEndDebugger {
 	public partial class GameForm : Form {
 		public const int UNIT = 15;
+		private enum State {
+			Connected, Disconnected
+		};
 
-		private int _id = -1;
+		// connection data
+		private int _id;
+		private string _address;
+		private int _port;
 		private string _username;
-		private Player _activePlayer { get { return _game.getPlayerById(_id); } }
-		private bool[] _moves;
-		private long _ping;
-		private long _lastTime;
-		private int _fps;
-		private bool _isInventoryOpen = false;
-
+		private string _password;
+		private bool _attemptConnection;
 		private Client _client;
+		private State state;
+
+		// game data
 		private Game _game;
-		private LoginForm loginForm;
-		private Logger logger;
+
+		// display data
+		private bool _isInventoryOpen = false;
+		private long _lastTime;
+		private long _ping;
+		private int _fps;
+
 		private ChatDisplay chatDisplay;
 		private ChatInput chatInput;
+		private LoginForm loginForm;
+		private Logger logger;
 		public Bitmap display { get; set; }
 
 		public GameForm() {
-            DoubleBuffered = true;
+			DoubleBuffered = true;
 
+			state = State.Disconnected;
 			_game = new Game();
 			_client = new Client();
 			display = new Bitmap(Width, Height);
@@ -41,118 +53,76 @@ namespace GameFrontEndDebugger {
 			chatInput = new ChatInput();
 			chatDisplay = new ChatDisplay();
 
-			chatInput.KeyDown += chatInput_KeyDown;
+			chatInput.KeyDown += chatInput_SubmitChat;
 
 			Controls.Add(chatInput);
 			Controls.Add(chatDisplay);
 			Controls.Add(logger);
-			_moves = new bool[] { false, false, false, false };
 
 			InitializeComponent();
 			setControlSize();
 			connectToServer();
-			new Thread(new ThreadStart(mainLoop)).Start();
-			Invalidate();
+
+			Application.Idle += new EventHandler(mainLoop);
 		}
 
-		private void setControlSize() {
+		#region game loop setup
 
-			Rectangle r = DisplayRectangle;
+		private bool AppStillIdle {
+			get {
+				NativeMessage msg;
+				return !PeekMessage(out msg, IntPtr.Zero, 0, 0, 0);
+			}
+		}
 
-			display = new Bitmap(Width, Height);
-			chatInput.Width = r.Width / 3;
-			chatInput.Height = 50;
-			chatInput.Location = new Point(0, r.Height - 50);
 
-			chatDisplay.Width = r.Width / 3;
-			chatDisplay.Height = r.Height / 2;
-			chatDisplay.Location = new Point(0, r.Height - 55 - chatDisplay.Height);
+		[StructLayout(LayoutKind.Sequential)]
+		public struct NativeMessage {
+			public IntPtr hWnd;
+			public uint msg;
+			public IntPtr wParam;
+			public IntPtr lParam;
+			public uint time;
+			public Point p;
+		}
 
-			logger.Width = r.Width / 2;
-			logger.Height = r.Height / 2;
-			logger.Location = new Point(r.Width -logger.Width, 0);
-        }
+		[System.Security.SuppressUnmanagedCodeSecurity] // We won’t use this maliciously
+		[DllImport("User32.dll", CharSet = CharSet.Auto)]
+		public static extern bool PeekMessage(out NativeMessage msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, uint flags);
 
-		public void connect(string address, int port, string username, string password) {
-			_username = username;
-			_client.Address = address;
-			_client.Port = port;
+		private void mainLoop(object sender, EventArgs e) {
+			while (AppStillIdle) {
+				if (_attemptConnection) {
+					connect();
+				}
+
+				handleServerMessages();
+				_game.update();
+				draw();
+			}
+		}
+		#endregion
+
+		#region data
+
+		private void connect() {
+			_attemptConnection = false;
+			_client.Address = _address;
+			_client.Port = _port;
 			_client.Start();
 
-			sendMessage(new Login(username).toByteArray());
-			//pingger.Enabled = true;
+			_client.send(new Login(_username).toByteArray());
 		}
 
-		private void connectToServer() {
-			if (!loginForm.Visible) {
-				loginForm.Show(this);
-			}
+		private void disconnect() {
+			state = State.Disconnected;
+			_game = new Game();
+			_id = -1;
+			_username = "";
+			_client.Stop();
 		}
 
-		private void GameApplication_FormClosed(object sender, FormClosedEventArgs e) {
-			sendMessage(new Logout().toByteArray());
-		}
-
-		private void GameApplication_KeyDown(object sender, KeyEventArgs e) {
-			if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Return) {
-				chatInput.Enabled = true;
-				chatInput.ReadOnly = false;
-				chatInput.Focus();
-			}
-
-			if (e.KeyCode == Keys.I) {
-				_isInventoryOpen = !_isInventoryOpen;
-			}
-
-			sendMove(e, false);
-		}
-
-		private void GameApplication_KeyUp(object sender, KeyEventArgs e) {
-			sendMove(e, true);
-		}
-
-		private void chatInput_KeyDown(object sender, KeyEventArgs e) {
-			if ((e.KeyCode == Keys.Return || e.KeyCode == Keys.Enter) && chatInput.Text != "") {
-				Chat chat = new Chat(_id, _username, chatInput.Text);
-				sendMessage(chat.toByteArray());
-
-				string data = "";
-				if (chat.chatType == ChatType.Whisper) {
-					data += "[To] " + chat.recipient + ": ";
-				} else {
-					data += "[Me] ";
-				}
-				data += chat.message + "\n";
-				chatDisplay.Text += data;
-
-				chatInput.Clear();
-				chatInput.Enabled = false;
-				chatInput.ReadOnly = true;
-			}
-
-			if (e.KeyCode == Keys.Escape) {
-				chatInput.Clear();
-				chatInput.Enabled = false;
-				chatInput.ReadOnly = true;
-			}
-		}
-
-		private void mainLoop() {
-			while (true) {
-				HandleServerMessages();
-				_game.update();
-			}
-		}
-
-		private void GameForm_Resize(object sender, EventArgs e) {
-			setControlSize();
-		}
-
-		private void pingger_Tick(object sender, EventArgs e) {
-			sendMessage(new Ping(_id).toByteArray());
-		}
-
-		private void HandleServerMessages() {
+		private void handleServerMessages() {
 			List<Message> messages = _client.PendingMessages;
 
 			foreach (Message m in messages) {
@@ -192,14 +162,12 @@ namespace GameFrontEndDebugger {
 			if (com.player == null) {
 				throw new ArgumentNullException("Login command from the server returned null");
 			}
-			_id = _game.addPlayer(com.player);
+			_game.addPlayer(com.player);
 		}
 
 		private void serverLogout(Logout com) {
 			if (com.id == _id) {
-				_game = new Game();
-				_id = -1;
-				_username = "";
+				disconnect();
 			}
 			_game.removePlayer(com.id);
 		}
@@ -207,6 +175,7 @@ namespace GameFrontEndDebugger {
 		private void serverLoadGame(LoadGame com) {
 			_game.loadPlayers(com.players);
 			_id = com.id;
+			state = State.Connected;
 		}
 
 		private void serverMove(Move com) {
@@ -232,33 +201,123 @@ namespace GameFrontEndDebugger {
 			_ping = (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - com.timestamp;
 		}
 
+		#endregion
+
+		#region controller
+		public void connect(string address, int port, string username, string password) {
+			_address = address;
+			_port = port;
+			_username = username;
+			_password = password;
+			_attemptConnection = true;
+		}
+
 		private void sendMove(KeyEventArgs e, bool isComplete) {
 			if (e.KeyCode == Keys.Up || e.KeyCode == Keys.Down || e.KeyCode == Keys.Left || e.KeyCode == Keys.Right) {
 				Direction dir = (Direction)Enum.Parse(typeof(Direction), e.KeyCode.ToString());
-				if (_moves[(int)dir] == isComplete) {
-					_moves[(int)dir] = _game.setPlayerMove(_id, dir, isComplete);
-					sendMessage(new Move(_id, dir, isComplete).toByteArray());
+				if (_game.setPlayerMove(_id, dir, isComplete)) {
+					_client.send(new Move(_id, dir, isComplete).toByteArray());
 				}
 			}
 		}
 
-		private void sendMessage(byte[] com) {
-			if (_client.IsConnected) {
-				_client.send(com);
+		private void GameApplication_FormClosed(object sender, FormClosedEventArgs e) {
+			_client.send(new Logout().toByteArray());
+			Close();
+		}
+
+		private void GameApplication_KeyDown(object sender, KeyEventArgs e) {
+			if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Return) {
+				activateChat();
+			}
+
+			if (e.KeyCode == Keys.I) {
+				_isInventoryOpen = !_isInventoryOpen;
+			}
+
+			sendMove(e, false);
+		}
+
+		private void GameApplication_KeyUp(object sender, KeyEventArgs e) {
+			sendMove(e, true);
+		}
+
+		private void chatInput_SubmitChat(object sender, KeyEventArgs e) {
+			if ((e.KeyCode == Keys.Return || e.KeyCode == Keys.Enter) && chatInput.Text != "") {
+				Chat chat = new Chat(_id, _username, chatInput.Text);
+				_client.send(chat.toByteArray());
+
+				string data = "";
+				if (chat.chatType == ChatType.Whisper) {
+					data += "[To] " + chat.recipient + ": ";
+				} else {
+					data += "[Me] ";
+				}
+				data += chat.message + "\n";
+				chatDisplay.Text += data;
+
+				deactivateChat();
+
+			} else if (e.KeyCode == Keys.Escape) {
+				deactivateChat();
 			}
 		}
 
-		protected override void OnPaint(PaintEventArgs e) {
-			if (_id == -1) {
+		private void GameForm_Resize(object sender, EventArgs e) {
+			setControlSize();
+		}
+
+		private void pingger_Tick(object sender, EventArgs e) {
+			_client.send(new Ping(_id).toByteArray());
+		}
+
+		#endregion
+
+		#region view
+		private void activateChat() {
+			chatInput.Activate();
+			chatDisplay.Activate();
+		}
+
+		private void deactivateChat() {
+			chatInput.Deactivate();
+			chatDisplay.Deactivate();
+		}
+
+		private void setControlSize() {
+
+			Rectangle r = DisplayRectangle;
+
+			display = new Bitmap(Width, Height);
+			chatInput.Width = r.Width / 3;
+			chatInput.Height = 50;
+			chatInput.Location = new Point(0, r.Height - 50);
+
+			chatDisplay.Width = r.Width / 3;
+			chatDisplay.Height = r.Height / 2;
+			chatDisplay.Location = new Point(0, r.Height - 55 - chatDisplay.Height);
+
+			logger.Width = r.Width / 2;
+			logger.Height = r.Height / 2;
+			logger.Location = new Point(r.Width - logger.Width, 0);
+		}
+
+		private void connectToServer() {
+			if (!loginForm.Visible) {
+				loginForm.Show(this);
+			}
+		}
+
+		private void draw() {
+			if (state == State.Disconnected) {
 				connectToServer();
-				Invalidate();
 				return;
 			} else {
 				loginForm.Hide();
 			}
 
 			Graphics g = Graphics.FromImage(display);
-			
+
 			g.FillRectangle(Brushes.Gray, new RectangleF(0, 0, Width, Height)); // create background
 			drawPlayers(g);
 			drawDebugger(g);
@@ -271,16 +330,14 @@ namespace GameFrontEndDebugger {
 			formGraphics.Flush();
 			formGraphics.Dispose();
 
-			// redraw clients
-			chatInput.Invalidate();
-			chatDisplay.Invalidate();
-			logger.Invalidate();
-			Invalidate();
+			chatInput.Refresh();
+			chatDisplay.Refresh();
+			logger.Refresh();
 		}
 
 		private void drawPlayers(Graphics g) {
 			Font font = new Font("courier", 10);
-			Player activePlayer = _activePlayer;
+			Player activePlayer = _game.getPlayerById(_id);
 
 			float canvasCenter_x = Width / 2;
 			float canvasCenter_y = Height / 2;
@@ -338,5 +395,7 @@ namespace GameFrontEndDebugger {
 				g.DrawString(s, font, Brushes.GreenYellow, 5, (i) * size.Height);
 			}
 		}
+		#endregion
+
 	}
 }
