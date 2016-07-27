@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Net;
 using GameServer.Networking;
+using Newtonsoft.Json;
+using System.Text;
 
 namespace GameServer {
 	public class GameServer {
@@ -70,11 +72,12 @@ namespace GameServer {
 		public GameServer() {
 			_users = new List<User>();
 			_server = new Server(1234);
-			_server.Start();
 			_game = new Game();
 			_inComing = new List<Message>();
 			_outGoing = new List<OutGoing>();
 			_toRemove = new List<User>();
+
+			_server.Start();
 			mainLoop();
 		}
 
@@ -192,12 +195,17 @@ namespace GameServer {
 				Console.WriteLine("CONNECTED\t {0} | {1}", sender.location, com.username);
 
 				// let the user know they are logged in
+				LoadGame lg = new LoadGame(sender.id, _game.Players);
+				byte[] bytes = lg.toByteArray();
+				//lg = (LoadGame)BaseCommand.fromByteArray(bytes);
+				lg = JsonConvert.DeserializeObject<LoadGame>(Encoding.ASCII.GetString(bytes));
+
 				_outGoing.Add(new OutGoing(sender.location, new LoadGame(sender.id, _game.Players)));
 
 				// send to everyone accept the user logging in
 				List<User> subUsers = _users.FindAll(u => u.id != id);
 				if (subUsers.Count > 0) {
-					Login response = new Login(id, com.username, _game.getPlayerById(id));
+					Login response = new Login(id, _game.getPlayerById(id));
 					_outGoing.Add(new OutGoing(subUsers, response));
 				}
 
@@ -240,7 +248,7 @@ namespace GameServer {
 		private void sendDataToClients() {
 			foreach (OutGoing message in _outGoing) {
 				//if (message.data.type != ComType.Ping)
-				//	Console.WriteLine(message.ToString());
+					//Console.WriteLine(message.data.ToString());
 				byte[] data = message.data.toByteArray();
 				_server.broadcast(message.clients, data);
 			}

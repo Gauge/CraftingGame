@@ -16,7 +16,6 @@ namespace GameFrontEndDebugger {
 				Console.WriteLine(er.ToString());
 				Console.WriteLine("failed to parse port number");
 			}
-			Hide();
 		}
 
 		private void Login_Load(object sender, EventArgs e) {

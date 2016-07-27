@@ -13,6 +13,7 @@ namespace GameFrontEndDebugger {
 				ControlStyles.UserPaint,
 				true);
 
+			ReadOnly = true;
 			Enabled = false;
 			BorderStyle = BorderStyle.None;
 			ScrollBars = RichTextBoxScrollBars.None;
@@ -20,6 +21,14 @@ namespace GameFrontEndDebugger {
 			ForeColor = Color.FromArgb(130, 255, 255, 255);
 			backColor = new SolidBrush(BackColor);
 			foreColor = new SolidBrush(ForeColor);
+		}
+
+		public void Activate() {
+			ForeColor = Color.FromArgb(255, 255, 255, 255);
+		}
+
+		public void Deactivate() {
+			ForeColor = Color.FromArgb(130, 255, 255, 255);
 		}
 
 		protected override void OnBackColorChanged(EventArgs e) {
@@ -34,25 +43,33 @@ namespace GameFrontEndDebugger {
 		Bitmap parentImage;
 		SolidBrush foreColor;
 		SolidBrush backColor;
-		protected override void OnPaint(PaintEventArgs e) {
+		Graphics g;
+		Point locationOnForm;
+		RectangleF imageSelect;
+		Rectangle textLoc;
+        protected override void OnPaint(PaintEventArgs e) {
             RectangleF r = DisplayRectangle;
 
 			backgroundImage = new Bitmap((int)r.Width, (int)r.Height);
 			parentImage = ((GameForm)Parent).display;
-			Graphics g = Graphics.FromImage(backgroundImage);
+			g = Graphics.FromImage(backgroundImage);
 
 			GraphicsUnit gu = GraphicsUnit.Pixel;
-			Point locationOnForm = Parent.PointToClient(Parent.PointToScreen(Location));
-			RectangleF imageSelect = new RectangleF(locationOnForm.X, locationOnForm.Y, Width, Height);
+			locationOnForm = Parent.PointToClient(Parent.PointToScreen(Location));
+			imageSelect = new RectangleF(locationOnForm.X, locationOnForm.Y, Width, Height);
 
 			g.DrawImage(parentImage, r, imageSelect, gu);
 			g.FillRectangle(backColor, r);
 
-			Rectangle textLoc = new Rectangle(0, Height, Width, 0);
+			textLoc = new Rectangle(0, Height, Width, 0);
 			for (int i = Lines.Length-1; i > 0; i--) {
-				textLoc.Height = (int)g.MeasureString(Lines[i], Font, Width).Height;
-				textLoc.Y -= textLoc.Height;
-				g.DrawString(Lines[i], Font, foreColor, textLoc);
+				if (textLoc.Y < 0) {
+					break;
+				} else {
+					textLoc.Height = (int)g.MeasureString(Lines[i], Font, Width).Height;
+					textLoc.Y -= textLoc.Height;
+					g.DrawString(Lines[i], Font, foreColor, textLoc);
+				}
 			}
 			g.Flush();
 			g.Dispose();
