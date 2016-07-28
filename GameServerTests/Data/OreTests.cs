@@ -57,7 +57,17 @@ namespace GameServer.Tests {
 
 		[TestMethod()]
 		public void removeTest() {
-			Assert.Fail();
+			Ore o = new Ore(0, "Normal", 400, 50, "This is oreish", 0.5);
+
+			Assert.IsTrue(o.remove(25));
+			Assert.AreEqual(25, o.weight);
+			Assert.AreEqual(0.5, o.purity);
+			Assert.IsFalse(o.remove(26));
+			Assert.AreEqual(25, o.weight);
+			Assert.AreEqual(0.5, o.purity);
+			Assert.IsFalse(o.remove(-5));
+			Assert.AreEqual(25, o.weight);
+			Assert.AreEqual(0.5, o.purity);
 		}
 	}
 }

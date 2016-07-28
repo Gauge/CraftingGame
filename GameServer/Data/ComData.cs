@@ -33,12 +33,24 @@ namespace GameServer {
 		}
 
 		public byte[] toByteArray() {
+			JsonSerializerSettings settings = new JsonSerializerSettings {
+				TypeNameHandling = TypeNameHandling.All
+			};
+
 			Type t = Type.GetType("GameServer." + (type).ToString());
-			return Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(this, t, new JsonSerializerSettings()));
+			return Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(this, t, settings));
 		}
 
 		public static BaseCommand fromByteArray(byte[] c) {
+			JsonSerializerSettings settings = new JsonSerializerSettings {
+				TypeNameHandling = TypeNameHandling.All
+			};
+
 			string data = Encoding.ASCII.GetString(c);
+			return JsonConvert.DeserializeObject<BaseCommand>(data, settings);
+
+
+			/*
 			string[] list = data.Split(new char[] { ',', ':', '{', '}' });
 			string comName = "";
 			for (int i = 0; i < list.Length; i++) {
@@ -51,8 +63,6 @@ namespace GameServer {
 				return null;
 
 			Type t = Type.GetType("GameServer." + comName);
-			Console.WriteLine(t.ToString());
-			Console.WriteLine(data.ToString());
 			MethodInfo[] methods = typeof(JsonConvert).GetMethods(BindingFlags.Public | BindingFlags.Static);
 			// drat... one short of 42. the magic number 41 was found with the commented code below
 			return (BaseCommand)methods[41].MakeGenericMethod(t).Invoke(null, new object[] { data });
@@ -164,7 +174,7 @@ namespace GameServer {
 		}
 
 		public override string ToString() {
-			return base.ToString() + "\t " + direction.ToString() + "\t " + x.ToString("0.00") + ":" + y.ToString("0.00") + "\t " + ((isComplete)? "START" : "END");
+			return base.ToString() + "\t " + direction.ToString() + "\t " + x.ToString("0.00") + ":" + y.ToString("0.00") + "\t " + ((!isComplete)? "START" : "END");
 			;
 		}
 	}

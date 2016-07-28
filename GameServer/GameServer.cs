@@ -195,11 +195,6 @@ namespace GameServer {
 				Console.WriteLine("CONNECTED\t {0} | {1}", sender.location, com.username);
 
 				// let the user know they are logged in
-				LoadGame lg = new LoadGame(sender.id, _game.Players);
-				byte[] bytes = lg.toByteArray();
-				//lg = (LoadGame)BaseCommand.fromByteArray(bytes);
-				lg = JsonConvert.DeserializeObject<LoadGame>(Encoding.ASCII.GetString(bytes));
-
 				_outGoing.Add(new OutGoing(sender.location, new LoadGame(sender.id, _game.Players)));
 
 				// send to everyone accept the user logging in

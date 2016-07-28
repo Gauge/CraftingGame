@@ -13,7 +13,7 @@ namespace GameFrontEndDebugger {
 	public partial class GameForm : Form {
 		public const int UNIT = 15;
 		private enum State {
-			Connected, Disconnected
+			Connected, Disconnected, Dead
 		};
 
 		// connection data
@@ -91,7 +91,7 @@ namespace GameFrontEndDebugger {
 		public static extern bool PeekMessage(out NativeMessage msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, uint flags);
 
 		private void mainLoop(object sender, EventArgs e) {
-			while (AppStillIdle) {
+			while (AppStillIdle && state != State.Dead) {
 				if (_attemptConnection) {
 					connect();
 				}
@@ -215,15 +215,16 @@ namespace GameFrontEndDebugger {
 		private void sendMove(KeyEventArgs e, bool isComplete) {
 			if (e.KeyCode == Keys.Up || e.KeyCode == Keys.Down || e.KeyCode == Keys.Left || e.KeyCode == Keys.Right) {
 				Direction dir = (Direction)Enum.Parse(typeof(Direction), e.KeyCode.ToString());
-				if (_game.setPlayerMove(_id, dir, isComplete)) {
-					_client.send(new Move(_id, dir, isComplete).toByteArray());
+				if (_game.getPlayerById(_id).Moves[(int)dir] == isComplete) {
+					_game.setPlayerMove(_id, dir, isComplete);
+                    _client.send(new Move(_id, dir, isComplete).toByteArray());
 				}
 			}
 		}
 
 		private void GameApplication_FormClosed(object sender, FormClosedEventArgs e) {
 			_client.send(new Logout().toByteArray());
-			Close();
+			state = State.Dead;
 		}
 
 		private void GameApplication_KeyDown(object sender, KeyEventArgs e) {
