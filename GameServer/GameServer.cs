@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Net;
 using GameServer.Networking;
-using Newtonsoft.Json;
-using System.Text;
 
 namespace GameServer {
 	public class GameServer {

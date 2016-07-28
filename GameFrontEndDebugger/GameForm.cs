@@ -39,6 +39,7 @@ namespace GameFrontEndDebugger {
 		private ChatInput chatInput;
 		private LoginForm loginForm;
 		private Logger logger;
+		private TransmitterForm transmitter;
 		public Bitmap display { get; set; }
 
 		public GameForm() {
@@ -50,6 +51,7 @@ namespace GameFrontEndDebugger {
 			display = new Bitmap(Width, Height);
 			loginForm = new LoginForm();
 			logger = new Logger();
+			transmitter = new TransmitterForm();
 			chatInput = new ChatInput();
 			chatDisplay = new ChatDisplay();
 
@@ -63,6 +65,8 @@ namespace GameFrontEndDebugger {
 			setControlSize();
 			connectToServer();
 
+			transmitter.Show(this);
+
 			Application.Idle += new EventHandler(mainLoop);
 		}
 
@@ -74,7 +78,6 @@ namespace GameFrontEndDebugger {
 				return !PeekMessage(out msg, IntPtr.Zero, 0, 0, 0);
 			}
 		}
-
 
 		[StructLayout(LayoutKind.Sequential)]
 		public struct NativeMessage {
@@ -204,6 +207,12 @@ namespace GameFrontEndDebugger {
 		#endregion
 
 		#region controller
+		public void transmit(string data) {
+			if (state == State.Connected) {
+				_client.send(data);
+			}
+		}
+
 		public void connect(string address, int port, string username, string password) {
 			_address = address;
 			_port = port;
@@ -217,7 +226,7 @@ namespace GameFrontEndDebugger {
 				Direction dir = (Direction)Enum.Parse(typeof(Direction), e.KeyCode.ToString());
 				if (_game.getPlayerById(_id).Moves[(int)dir] == isComplete) {
 					_game.setPlayerMove(_id, dir, isComplete);
-                    _client.send(new Move(_id, dir, isComplete).toByteArray());
+					_client.send(new Move(_id, dir, isComplete).toByteArray());
 				}
 			}
 		}

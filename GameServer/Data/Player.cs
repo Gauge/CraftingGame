@@ -79,11 +79,8 @@ namespace GameServer {
 		public string username { get; set; }
 		public double x { get; set; }
 		public double y { get; set; }
-		public List<bool> Moves { get; private set; }
-
-		//private Item[] _inventory = new Item[30];
-		//public Item[] Inventory { get { return _inventory; } }
-
+		public List<bool> Moves { get; set; }
+		public List<Item> Inventory { get; set; }
 
 		public Player(int id, string username) {
 			this.id = id;
@@ -91,9 +88,10 @@ namespace GameServer {
 			x = 0;
 			y = 0;
 			Moves = new List<bool> { false, false, false, false };
+			Inventory = new List<Item>();
 
 			// temp test
-			//_inventory[0] = new Ore(1, "Copper Ore", 10, 20.5, "It's copper what else is there to say", 0.67335);
+			Inventory.Add(new Ore(1, "Copper Ore", 10, 20.5, "It's copper what else is there to say", 0.67335));
 		}
 
 		public bool setMove(Direction d, bool isComplete) {

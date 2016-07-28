@@ -49,7 +49,6 @@ namespace GameServer {
 			string data = Encoding.ASCII.GetString(c);
 			return JsonConvert.DeserializeObject<BaseCommand>(data, settings);
 
-
 			/*
 			string[] list = data.Split(new char[] { ',', ':', '{', '}' });
 			string comName = "";
@@ -122,7 +121,7 @@ namespace GameServer {
 		public string message { get; set; }
 
 		[JsonConstructor]
-		private Chat(int id = -1, ChatType chatType = ChatType.System, string message = null, string sender = null, string recipient = null, long timestamp =0) : base(ComType.Chat, id, timestamp) {
+		private Chat(int id = -1, ChatType chatType = ChatType.System, string message = null, string sender = null, string recipient = null, long timestamp = 0) : base(ComType.Chat, id, timestamp) {
 			this.chatType = chatType;
 			this.message = message;
 			this.sender = sender;
@@ -144,7 +143,7 @@ namespace GameServer {
 				if (list[0] == "/w" || list[0] == "/whisper") {
 					string m = "";
 					for (int i = 2; i < list.Length; i++) {
-						m += ((i+1 == list.Length) ? list[i] : list[i] + " ");
+						m += ((i + 1 == list.Length) ? list[i] : list[i] + " ");
 					}
 					chatType = ChatType.Whisper;
 					if (list.Length > 1)
@@ -155,7 +154,7 @@ namespace GameServer {
 		}
 
 		public override string ToString() {
-			return base.ToString() + "\t " + chatType.ToString() + ((sender != null) ? "\t From: " + sender : "") + ((recipient != null) ? "\t To: " + recipient: "") + "\t Msg: " + message;
+			return base.ToString() + "\t " + chatType.ToString() + ((sender != null) ? "\t From: " + sender : "") + ((recipient != null) ? "\t To: " + recipient : "") + "\t Msg: " + message;
 		}
 	}
 
@@ -174,7 +173,7 @@ namespace GameServer {
 		}
 
 		public override string ToString() {
-			return base.ToString() + "\t " + direction.ToString() + "\t " + x.ToString("0.00") + ":" + y.ToString("0.00") + "\t " + ((!isComplete)? "START" : "END");
+			return base.ToString() + "\t " + direction.ToString() + "\t " + x.ToString("0.00") + ":" + y.ToString("0.00") + "\t " + ((!isComplete) ? "START" : "END");
 			;
 		}
 	}
