@@ -30,7 +30,7 @@ namespace GameFrontEndDebugger {
 		private Game _game;
 
 		// display data
-		private bool _isInventoryOpen = false;
+		//private bool _isInventoryOpen = false;
 		private long _lastTime;
 		private long _ping;
 		private int _fps;
@@ -40,6 +40,7 @@ namespace GameFrontEndDebugger {
 		private LoginForm loginForm;
 		private Logger logger;
 		private TransmitterForm transmitter;
+		private InventoryForm inventoryForm;
 		public Bitmap display { get; set; }
 
 		public GameForm() {
@@ -51,9 +52,10 @@ namespace GameFrontEndDebugger {
 			display = new Bitmap(Width, Height);
 			loginForm = new LoginForm();
 			logger = new Logger();
-			transmitter = new TransmitterForm();
+			transmitter = new TransmitterForm(this);
 			chatInput = new ChatInput();
 			chatDisplay = new ChatDisplay();
+			inventoryForm = new InventoryForm();
 
 			chatInput.KeyDown += chatInput_SubmitChat;
 
@@ -65,6 +67,7 @@ namespace GameFrontEndDebugger {
 			setControlSize();
 			connectToServer();
 
+			inventoryForm.Owner = this;
 			transmitter.Show(this);
 
 			Application.Idle += new EventHandler(mainLoop);
@@ -101,6 +104,7 @@ namespace GameFrontEndDebugger {
 
 				handleServerMessages();
 				_game.update();
+				inventoryForm.update(_game.getPlayerById(_id));
 				draw();
 			}
 		}
@@ -204,6 +208,26 @@ namespace GameFrontEndDebugger {
 			_ping = (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - com.timestamp;
 		}
 
+		public void combineInventoryItems(int index1, int index2) {
+			Player p = _game.getPlayerById(_id);
+			p.resizeInventory();
+			// this will need to change when more than ore is added
+			Ore item1 = (Ore)p.Inventory[index1];
+			Ore item2 = (Ore)p.Inventory[index2];
+
+			if (item1 != null && item2 != null && item1.id == item2.id) {
+				item2.add(item1.weight, item2.purity);
+				p.Inventory[index1] = null;
+
+			} else {
+				// switch locations if they arn't compatable
+				p.Inventory[index1] = item2;
+				p.Inventory[index2] = item1;
+					
+			}
+			_client.send(new Inventory(InvType.Combine, _id, index1, index2).toByteArray());
+		}
+
 		#endregion
 
 		#region controller
@@ -242,7 +266,13 @@ namespace GameFrontEndDebugger {
 			}
 
 			if (e.KeyCode == Keys.I) {
-				_isInventoryOpen = !_isInventoryOpen;
+
+				if (!inventoryForm.Visible) {
+					inventoryForm.Show();
+					Focus();
+				} else {
+					inventoryForm.Hide();
+				}
 			}
 
 			sendMove(e, false);

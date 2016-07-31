@@ -2,18 +2,21 @@
 using System.Text;
 using Newtonsoft.Json;
 using System.Collections.Generic;
-using System.Reflection;
 
 namespace GameServer {
 
 	public enum ComType {
-		Login, Logout, LoadGame, Chat, Move, Ping
+		Login, Logout, LoadGame, Chat, Move, Inventory, Ping
 	};
 	public enum Direction {
 		Up, Down, Left, Right
 	};
 	public enum ChatType {
 		System, Global, Whisper
+	};
+
+	public enum InvType {
+		Combine, Split
 	};
 
 	public abstract class BaseCommand {
@@ -184,5 +187,21 @@ namespace GameServer {
 		public override string ToString() {
 			return base.ToString() + " " + (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond - timestamp);
 		}
+	}
+
+	public class Inventory : BaseCommand {
+
+		public InvType invType;
+		public int itemIndex1 { get; set; }
+		public int itemIndex2 { get; set; }
+		public Item change { get; set; }
+
+		public Inventory(InvType invType, int id, int itemIndex1, int itemIndex2 = -1, Item change = null, long timestamp = 0) : base(ComType.Inventory, id, timestamp) {
+			this.invType = invType;
+			this.itemIndex1 = itemIndex1;
+			this.itemIndex2 = itemIndex2;
+			this.change = change;
+		}
+
 	}
 }

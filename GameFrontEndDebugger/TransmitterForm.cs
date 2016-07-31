@@ -10,7 +10,8 @@ using System.Windows.Forms;
 
 namespace GameFrontEndDebugger {
 	public partial class TransmitterForm : Form {
-		public TransmitterForm() {
+		public TransmitterForm(Form owner) {
+			Location = new Point(owner.Location.X - Width, owner.Location.Y);
 			InitializeComponent();
 		}
 

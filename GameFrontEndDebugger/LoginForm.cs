@@ -22,5 +22,9 @@ namespace GameFrontEndDebugger {
 			tbUsername.Text = "Debugger" + (int)(new Random().NextDouble() * 10000);
 		}
 
+		private void LoginForm_FormClosing(object sender, FormClosingEventArgs e) {
+			Hide();
+			e.Cancel = true;
+		}
 	}
 }

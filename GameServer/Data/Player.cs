@@ -72,8 +72,9 @@ namespace GameServer {
 	}
 
 	public class Player {
-		public static int movementSpeed = 750; // this is temp till i get other matter settled with
-		public static int speedPerUnit = 100;
+		public const int movementSpeed = 750; // this is temp till i get other matter settled with
+		public const int speedPerUnit = 100;
+		public const int inventorySize = 30;
 
 		public int id { get; set; }
 		public string username { get; set; }
@@ -91,7 +92,13 @@ namespace GameServer {
 			Inventory = new List<Item>();
 
 			// temp test
-			Inventory.Add(new Ore(1, "Copper Ore", 10, 20.5, "It's copper what else is there to say", 0.67335));
+			Inventory.Add(new Ore(1000, "Copper Ore", 10, 20.5, "It's copper what else is there to say", 0.67335));
+		}
+
+		public void resizeInventory() {
+			for (int i = Inventory.Count - 1; i < inventorySize-1; i++) {
+				Inventory.Add(null);
+			}
 		}
 
 		public bool setMove(Direction d, bool isComplete) {
