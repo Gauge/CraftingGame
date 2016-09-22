@@ -2,22 +2,25 @@
 using System.Text;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using GameServer.Data.Interactables;
 
-namespace GameServer {
+namespace GameServer.Data {
 
 	public enum ComType {
-		Login, Logout, LoadGame, Chat, Move, Inventory, Ping
+		Login, Logout, LoadGame, Chat, Move, Inventory, Ping, Interact, MG_Smelting, Error
 	};
 	public enum Direction {
-		Up, Down, Left, Right
+		Up, Down, Left, Right, None
 	};
 	public enum ChatType {
 		System, Global, Whisper
 	};
-
 	public enum InvType {
 		Combine, Split
 	};
+	public enum MG_Type_Smelting {
+		Setup, Active, Complete
+	}
 
 	public abstract class BaseCommand {
 		public ComType type { get; }
@@ -185,7 +188,7 @@ namespace GameServer {
 		public Ping(int id, long timestamp = 0) : base(ComType.Ping, id, timestamp) { }
 
 		public override string ToString() {
-			return base.ToString() + " " + (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond - timestamp);
+			return base.ToString() + " " + (Settings.getTimestamp() - timestamp);
 		}
 	}
 
@@ -194,14 +197,46 @@ namespace GameServer {
 		public InvType invType;
 		public int itemIndex1 { get; set; }
 		public int itemIndex2 { get; set; }
-		public Item change { get; set; }
+		public List<Item> updatedInventory { get; set; }
 
-		public Inventory(InvType invType, int id, int itemIndex1, int itemIndex2 = -1, Item change = null, long timestamp = 0) : base(ComType.Inventory, id, timestamp) {
+		public Inventory(InvType invType, int id, int itemIndex1, int itemIndex2 = -1, List<Item> updatedInventory = null, long timestamp = 0) : base(ComType.Inventory, id, timestamp) {
 			this.invType = invType;
 			this.itemIndex1 = itemIndex1;
 			this.itemIndex2 = itemIndex2;
-			this.change = change;
+			this.updatedInventory = updatedInventory;
 		}
 
+		public override string ToString() {
+			return "Inventory\t" + invType.ToString() + "\tIndex1: " + itemIndex1 + "\tIndex2: " + itemIndex2;
+			;
+		}
 	}
+
+	public class Interact : BaseCommand {
+		public int interactableIndex { get; set; }
+
+		public Interact(int interactableIndex) : base(ComType.Interact, -1, Settings.getTimestamp()) {
+			this.interactableIndex = interactableIndex;
+		}
+	}
+
+	public class Error : BaseCommand {
+
+		public Error() : base(ComType.Error, -1, Settings.getTimestamp()) {
+		}
+	}
+
+	public class MG_Smelting : BaseCommand {
+
+		public MG_Type_Smelting state { get; }
+		public bool isActive { get; }
+		public double temprature { get; }
+
+		[JsonConstructor()]
+		public MG_Smelting(int id, MG_Type_Smelting state, bool isActive, double temprature, long timestamp = 0) : base(ComType.MG_Smelting, id, timestamp) {
+			this.state = state;
+			this.temprature = temprature;
+		}
+	}
+
 }

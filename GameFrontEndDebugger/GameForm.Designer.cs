@@ -46,7 +46,7 @@
 			this.Name = "GameForm";
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
 			this.Text = "Game Debugger";
-			this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.GameApplication_FormClosed);
+			this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.GameApplication_FormClosing);
 			this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.GameApplication_KeyDown);
 			this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.GameApplication_KeyUp);
 			this.Resize += new System.EventHandler(this.GameForm_Resize);

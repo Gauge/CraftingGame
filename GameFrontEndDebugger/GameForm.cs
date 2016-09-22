@@ -2,16 +2,18 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
-using GameServer;
+using GameServer.Data;
 using GameServer.Networking;
 using GameFrontEndDebugger.Controls;
 using Message = GameServer.Networking.Message;
 using Logger = GameFrontEndDebugger.Controls.Logger;
 using System.Runtime.InteropServices;
+using GameServer.Data.Interactables;
+using DeltaTimer = GameServer.Data.Settings;
+using GameServer.Data.Resources;
 
 namespace GameFrontEndDebugger {
 	public partial class GameForm : Form {
-		public const int UNIT = 15;
 		private enum State {
 			Connected, Disconnected, Dead
 		};
@@ -24,14 +26,13 @@ namespace GameFrontEndDebugger {
 		private string _password;
 		private bool _attemptConnection;
 		private Client _client;
-		private State state;
 
 		// game data
 		private Game _game;
+		private State state;
+		private Player _activePlayer;
 
 		// display data
-		//private bool _isInventoryOpen = false;
-		private long _lastTime;
 		private long _ping;
 		private int _fps;
 
@@ -68,7 +69,12 @@ namespace GameFrontEndDebugger {
 			connectToServer();
 
 			inventoryForm.Owner = this;
-			transmitter.Show(this);
+
+			if (Settings.Debug) {
+				transmitter.Show(this);
+			} else {
+				logger.Hide();
+			}
 
 			Application.Idle += new EventHandler(mainLoop);
 		}
@@ -98,6 +104,8 @@ namespace GameFrontEndDebugger {
 
 		private void mainLoop(object sender, EventArgs e) {
 			while (AppStillIdle && state != State.Dead) {
+				DeltaTimer.getDelta(true);
+
 				if (_attemptConnection) {
 					connect();
 				}
@@ -106,6 +114,11 @@ namespace GameFrontEndDebugger {
 				_game.update();
 				inventoryForm.update(_game.getPlayerById(_id));
 				draw();
+			}
+
+			if (state == State.Dead) {
+				Dispose();
+				Application.Exit();
 			}
 		}
 		#endregion
@@ -138,6 +151,10 @@ namespace GameFrontEndDebugger {
 					logger.Log(com.ToString());
 
 				switch (com.type) {
+					case ComType.Ping:
+						serverPing((Ping)com);
+						break;
+
 					case ComType.Login:
 						serverLogin((Login)com);
 						break;
@@ -158,12 +175,12 @@ namespace GameFrontEndDebugger {
 						serverChat((Chat)com);
 						break;
 
-					case ComType.Ping:
-						serverPing((Ping)com);
-						break;
+					case ComType.Inventory:
+						serverInventory((Inventory)com);
+                        break;
 				}
 			}
-		}
+		}  
 
 		private void serverLogin(Login com) {
 			if (com.player == null) {
@@ -208,23 +225,17 @@ namespace GameFrontEndDebugger {
 			_ping = (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - com.timestamp;
 		}
 
-		public void combineInventoryItems(int index1, int index2) {
+		private void serverInventory(Inventory com) {
 			Player p = _game.getPlayerById(_id);
-			p.resizeInventory();
-			// this will need to change when more than ore is added
-			Ore item1 = (Ore)p.Inventory[index1];
-			Ore item2 = (Ore)p.Inventory[index2];
+			p.Inventory = com.updatedInventory;
+		}
 
-			if (item1 != null && item2 != null && item1.id == item2.id) {
-				item2.add(item1.weight, item2.purity);
-				p.Inventory[index1] = null;
+		public void combineInventoryItems(int index1, int index2) {
+			if (!_client.IsConnected)
+				return;
+			Player p = _game.getPlayerById(_id);
+			p.moveCombineItem(index1, index2);
 
-			} else {
-				// switch locations if they arn't compatable
-				p.Inventory[index1] = item2;
-				p.Inventory[index2] = item1;
-					
-			}
 			_client.send(new Inventory(InvType.Combine, _id, index1, index2).toByteArray());
 		}
 
@@ -246,8 +257,9 @@ namespace GameFrontEndDebugger {
 		}
 
 		private void sendMove(KeyEventArgs e, bool isComplete) {
-			if (e.KeyCode == Keys.Up || e.KeyCode == Keys.Down || e.KeyCode == Keys.Left || e.KeyCode == Keys.Right) {
-				Direction dir = (Direction)Enum.Parse(typeof(Direction), e.KeyCode.ToString());
+			Direction dir = Settings.keyDirection(e.KeyCode);
+
+			if (dir != Direction.None) {
 				if (_game.getPlayerById(_id).Moves[(int)dir] == isComplete) {
 					_game.setPlayerMove(_id, dir, isComplete);
 					_client.send(new Move(_id, dir, isComplete).toByteArray());
@@ -255,7 +267,7 @@ namespace GameFrontEndDebugger {
 			}
 		}
 
-		private void GameApplication_FormClosed(object sender, FormClosedEventArgs e) {
+		private void GameApplication_FormClosing(object sender, FormClosingEventArgs e) {
 			_client.send(new Logout().toByteArray());
 			state = State.Dead;
 		}
@@ -274,6 +286,13 @@ namespace GameFrontEndDebugger {
 					inventoryForm.Hide();
 				}
 			}
+
+			if (e.KeyCode == Keys.E) {
+				
+				Kiln k = (Kiln)_game.Tools[0];
+				k.ore = ((Ore)_activePlayer.Inventory[0]);
+				k.startGame();
+            }
 
 			sendMove(e, false);
 		}
@@ -348,6 +367,22 @@ namespace GameFrontEndDebugger {
 			}
 		}
 
+
+		private RectangleF translateToCameraView(double x, double y, double width, double height) {
+			RectangleF r = new RectangleF();
+			r.X = ((Width / 2) - ((float)(_activePlayer.x - x) * Settings.UNIT)) - (float)(Settings.UNIT* width / 2);
+			r.Y = ((Height / 2) - ((float)(_activePlayer.y - y) * Settings.UNIT)) - (float)(Settings.UNIT* height / 2);
+			r.Width = (float)(Settings.UNIT * width);
+			r.Height = (float)(Settings.UNIT * height);
+			return r;
+
+		}
+
+		private Font _font = new Font("courier", 10);
+		private SolidBrush _highlightBrush = new SolidBrush(Color.FromArgb(50, 0, 255, 0));
+		private SolidBrush _nonHighlightBrush = new SolidBrush(Color.FromArgb(50, 0, 0, 0));
+		private Pen _highlightPen = new Pen(Color.FromArgb(50, 0, 255, 0), 3);
+		private Pen _nonHighlightPen = new Pen(Color.FromArgb(25, 0, 0, 0), 3);
 		private void draw() {
 			if (state == State.Disconnected) {
 				connectToServer();
@@ -356,11 +391,16 @@ namespace GameFrontEndDebugger {
 				loginForm.Hide();
 			}
 
+			_activePlayer = _game.getPlayerById(_id);
 			Graphics g = Graphics.FromImage(display);
 
 			g.FillRectangle(Brushes.Gray, new RectangleF(0, 0, Width, Height)); // create background
+			drawInteractables(g);
 			drawPlayers(g);
-			drawDebugger(g);
+
+			if (Settings.Debug) {
+				drawDebugger(g);
+			}
 
 			g.Flush();
 			g.Dispose();
@@ -372,52 +412,43 @@ namespace GameFrontEndDebugger {
 
 			chatInput.Refresh();
 			chatDisplay.Refresh();
-			logger.Refresh();
+
+			if (Settings.Debug) {
+				logger.Refresh();
+			}
 		}
 
 		private void drawPlayers(Graphics g) {
-			Font font = new Font("courier", 10);
-			Player activePlayer = _game.getPlayerById(_id);
-
-			float canvasCenter_x = Width / 2;
-			float canvasCenter_y = Height / 2;
-			float unitOffset = (UNIT / 2);
-			float xOffset;
-			float yOffset;
-			float realPosition_x;
-			float realPosition_y;
-			float drawPosition_x;
-			float drawPosition_y;
-			SizeF textSize;
-
-			float test = (float)(activePlayer.x - -20) * UNIT;
-			float test2 = (float)(activePlayer.y - -20) * UNIT;
-			g.FillRectangle(Brushes.Peru, new RectangleF((canvasCenter_x - test), (canvasCenter_y - test2), 40, 40));
+            //g.FillRectangle(Brushes.Peru, translateToCameraView(-5, -5, 2, 2));
 
 			foreach (Player p in _game.Players) {
-				xOffset = (float)((activePlayer.x - p.x) * UNIT);
-				yOffset = (float)((activePlayer.y - p.y) * UNIT);
+				RectangleF rect = translateToCameraView(p.x, p.y, 1, 1);
+                g.FillRectangle(Brushes.Red, rect);
 
-				realPosition_x = canvasCenter_x - xOffset;
-				realPosition_y = canvasCenter_y - yOffset;
+				SizeF textSize = g.MeasureString(_activePlayer.name, _font);
+				g.DrawString(p.name, _font, Brushes.GreenYellow, (rect.X - (textSize.Width / 2)) + (Settings.UNIT/2), (rect.Y + (textSize.Height / 2)) + (Settings.UNIT/2));
+			}
+		}
 
-				drawPosition_x = realPosition_x - unitOffset;
-				drawPosition_y = realPosition_y - unitOffset;
+		private void drawInteractables(Graphics g) {
+			foreach (Interactable obj in _game.Tools) {
+				g.DrawImage(Assets.getIconById(obj.id), translateToCameraView(obj.x, obj.y, 2, 2));
 
-				// draw player
-				RectangleF rect = new RectangleF(drawPosition_x, drawPosition_y, UNIT, UNIT);
-				g.FillRectangle(Brushes.Red, rect);
-
-				textSize = g.MeasureString(activePlayer.username, font);
-				g.DrawString(p.username, font, Brushes.GreenYellow, (realPosition_x - (textSize.Width / 2)), (realPosition_y + (textSize.Height / 2) + unitOffset));
+				if (Settings.Debug) {
+					if (obj.isInRange(_activePlayer)) {
+						g.FillEllipse(_highlightBrush, translateToCameraView(obj.x, obj.y, obj.actionRadious, obj.actionRadious));
+						g.DrawEllipse(_highlightPen, translateToCameraView(obj.x, obj.y, obj.actionRadious, obj.actionRadious));
+					} else {
+						g.FillEllipse(_nonHighlightBrush, translateToCameraView(obj.x, obj.y, obj.actionRadious, obj.actionRadious));
+						g.DrawEllipse(_nonHighlightPen, translateToCameraView(obj.x, obj.y, obj.actionRadious, obj.actionRadious));
+					}
+				}
 			}
 		}
 
 		private void drawDebugger(Graphics g) {
-			// update delta
-			long currentTime = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
-			long delta = currentTime - _lastTime;
-			_lastTime = currentTime;
+
+			long delta = DeltaTimer.getDelta();
 
 			Font font = new Font("courier", 10);
 			string[] debugStrings = new string[4];

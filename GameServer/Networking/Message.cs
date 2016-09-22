@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using GameServer.Data;
+using System.Net;
 
 namespace GameServer.Networking {
 	public struct Message {

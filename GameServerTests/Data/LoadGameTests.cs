@@ -1,4 +1,6 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using GameServer.Data;
+using GameServer.Data.Interactables;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 
 namespace GameServer.Tests {
@@ -14,9 +16,9 @@ namespace GameServer.Tests {
 
 			Assert.AreEqual(3, lg.id);
 			Assert.AreEqual(3, lg.players.Count);
-			Assert.AreEqual("Bob", lg.players[0].username);
-			Assert.AreEqual("Ted", lg.players[1].username);
-			Assert.AreEqual("Jim", lg.players[2].username);
+			Assert.AreEqual("Bob", lg.players[0].name);
+			Assert.AreEqual("Ted", lg.players[1].name);
+			Assert.AreEqual("Jim", lg.players[2].name);
 		}
 
 		[TestMethod()]
@@ -31,9 +33,9 @@ namespace GameServer.Tests {
 
 			Assert.AreEqual(lg2.id, lg.id);
 			Assert.AreEqual(lg2.players.Count, lg.players.Count);
-			Assert.AreEqual(lg2.players[0].username, lg.players[0].username);
-			Assert.AreEqual(lg2.players[1].username, lg.players[1].username);
-			Assert.AreEqual(lg2.players[2].username, lg.players[2].username);
+			Assert.AreEqual(lg2.players[0].name, lg.players[0].name);
+			Assert.AreEqual(lg2.players[1].name, lg.players[1].name);
+			Assert.AreEqual(lg2.players[2].name, lg.players[2].name);
 		}
 	}
 }

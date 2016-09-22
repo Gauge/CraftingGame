@@ -1,17 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using GameServer.Data.Interactables;
 
-namespace GameServer {
+namespace GameServer.Data {
 
 	public class Game {
 		public List<Player> Players { get; private set; }
+		public List<Interactable> Tools {get; private set;}
 		private List<int> _playersToRemove;
-		private long _lastTime;
 
 		public Game() {
 			Players = new List<Player>();
+			Tools = new List<Interactable>();
+
+			Tools.Add(new Kiln(5, 10)); // testing
 			_playersToRemove = new List<int>();
-			_lastTime = 0;
 		}
 
 
@@ -44,9 +47,9 @@ namespace GameServer {
 		}
 
 		public int addPlayer(Player p) {
-			if (Players.Find(plr => plr.username == p.username || plr.id == p.id) == null) {
+			if (Players.Find(plr => plr.name == p.name || plr.id == p.id) == null) {
 				Players.Add(p);
-				return getIdByUsername(p.username);
+				return getIdByUsername(p.name);
 			}
 			return -1;
 		}
@@ -68,11 +71,11 @@ namespace GameServer {
 		}
 
 		public Player getPlayerByUsername(string username) {
-			return Players.Find(p => p.username == username);
+			return Players.Find(p => p.name == username);
 		}
 
 		public int getIdByUsername(string username) {
-			Player plr = Players.Find(p => p.username == username);
+			Player plr = Players.Find(p => p.name == username);
 			if (plr != null)
 				return plr.id;
 			return -1;
@@ -97,30 +100,14 @@ namespace GameServer {
 		}
 
 		public void update() {
-			// update delta
-			long currentTime = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
-			long delta = currentTime - _lastTime;
-			_lastTime = currentTime;
-
 			foreach (Player p in Players) {
-				double amountToMove = (((double)(Player.movementSpeed / Player.speedPerUnit) * (double)delta) / 1000);
-
-				if (p.Moves[0]) {
-					p.y -= amountToMove;
-				}
-
-				if (p.Moves[1]) {
-					p.y += amountToMove;
-				}
-
-				if (p.Moves[2]) {
-					p.x -= amountToMove;
-				}
-
-				if (p.Moves[3]) {
-					p.x += amountToMove;
-				}
+				p.update();
 			}
+
+			foreach (Interactable i in Tools) {
+				i.update();
+			}
+
 			removePlayers();
 		}
 

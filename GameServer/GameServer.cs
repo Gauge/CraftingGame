@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Net;
 using GameServer.Networking;
+using GameServer.Data;
+using GameServer.Data.Interactables;
 
 namespace GameServer {
 	public class GameServer {
@@ -82,6 +84,7 @@ namespace GameServer {
 		private void mainLoop() {
 			Console.WriteLine("Starting game loop...");
 			while (true) {
+				Settings.getDelta(true);
 				handleRemovedClients();
 				handleClientData();
 				updateClientRequests();
@@ -104,7 +107,7 @@ namespace GameServer {
 			foreach (User user in _toRemove) {
 				string formattedName = "";
 				if (user.id != -1) {
-					formattedName = "| " + _game.getPlayerById(user.id).username;
+					formattedName = "| " + _game.getPlayerById(user.id).name;
 					_game.removePlayer(user.id);
 					_outGoing.Add(new OutGoing(_users, new Logout(user.id)));
 				}
@@ -156,6 +159,10 @@ namespace GameServer {
 					Console.WriteLine(com.ToString());
 
 				switch (com.type) {
+					case ComType.Ping:
+						userPing(sender, (Ping)com);
+						break;
+
 					case ComType.Login:
 						userLogin(sender, (Login)com);
 						break;
@@ -166,17 +173,20 @@ namespace GameServer {
 
 					case ComType.Chat:
 						userChat(sender, (Chat)com);
+						break;
 
+					case ComType.Inventory:
+						userInventory(sender, (Inventory)com);
 						break;
 
 					case ComType.Move:
 						userMove(sender, (Move)com);
 						break;
 
-					case ComType.Ping:
-						userPing(sender, (Ping)com);
+					case ComType.Interact:
+						userInteract(sender, (Interact)com);
 						break;
-				}
+                }
 			}
 			_inComing.Clear();
 		}
@@ -227,6 +237,14 @@ namespace GameServer {
 			}
 		}
 
+		private void userInventory(User sender, Inventory com) {
+			Player p = _game.getPlayerById(sender.id);
+
+			p.moveCombineItem(com.itemIndex1, com.itemIndex2);
+			com.updatedInventory = p.Inventory;
+			_outGoing.Add(new OutGoing(sender.location, com));
+		}
+
 		private void userMove(User sender, Move com) {
 			_game.setPlayerMove(com.id, com.direction, com.isComplete);
 
@@ -236,6 +254,10 @@ namespace GameServer {
 
 		private void userPing(User sender, Ping com) {
 			_outGoing.Add(new OutGoing(sender.location, com));
+		}
+
+		private void userInteract(User sender, Interact com) {
+
 		}
 
 		private void sendDataToClients() {

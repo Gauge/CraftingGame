@@ -65,7 +65,7 @@ namespace GameServer.Networking {
 		private void updateConnection() {
 			if (_serverLocation.AddressList.Length >= 2) {
 				_socket = new UdpClient();
-				_server = new IPEndPoint(_serverLocation.AddressList[1], _port);
+				_server = new IPEndPoint(_serverLocation.AddressList[4], _port);
 				_socket.Connect(_server);
 			} else {
 				throw null;

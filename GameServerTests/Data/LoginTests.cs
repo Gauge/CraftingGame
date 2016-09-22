@@ -1,4 +1,6 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using GameServer.Data;
+using GameServer.Data.Interactables;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using System.Threading;
 
@@ -59,7 +61,7 @@ namespace GameServer.Tests {
 			Assert.AreEqual(output.id, l.id);
 			Assert.AreEqual(output.username, l.username);
 			Assert.AreEqual(output.player.id, l.player.id);
-			Assert.AreEqual(output.player.username, l.player.username);
+			Assert.AreEqual(output.player.name, l.player.name);
 			Assert.AreEqual(output.timestamp, l.timestamp);
 
 		}

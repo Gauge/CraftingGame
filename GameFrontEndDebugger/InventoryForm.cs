@@ -1,6 +1,10 @@
 ﻿using GameServer;
+using GameServer.Data;
+using GameServer.Data.Interactables;
 using System;
 using System.Drawing;
+using System.IO;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace GameFrontEndDebugger {
@@ -33,14 +37,13 @@ namespace GameFrontEndDebugger {
 					p.AllowDrop = true;
 					panels[index] = p;
 					p.Tag = index;
+					p.BackgroundImageLayout = ImageLayout.Stretch;
 					Controls.Add(p);
 					index++;
                 }
 			}
 
 			int titleHeight = RectangleToScreen(ClientRectangle).Top - Top;
-
-			Size = new Size((width * 5) + 30, (height * 6) + 35 + titleHeight);
 			InitializeComponent();
 		}
 
@@ -72,10 +75,10 @@ namespace GameFrontEndDebugger {
 					Item item = active.Inventory[i];
 					Panel p = panels[i];
 
-					if (item == null){
-						p.BackColor = Color.White;
-					} else if (item.id == 1000) {
-						p.BackColor = Color.Brown;
+					if (item == null) {
+						p.BackgroundImage = null;
+					} else {
+						p.BackgroundImage = Assets.getIconById(item.id);
 					}
 				}
 			}

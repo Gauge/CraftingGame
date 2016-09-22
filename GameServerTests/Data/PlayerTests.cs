@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using GameServer.Data;
+using GameServer.Data.Interactables;
 
 namespace GameServer.Tests {
 	[TestClass()]
@@ -17,7 +19,7 @@ namespace GameServer.Tests {
 
 			Assert.AreNotEqual(p.id, -1, "ID is never -1");
 			Assert.AreEqual((p.id + 1), p2.id, "ID Increments by 1");
-			Assert.AreEqual(p.username, "Bob", "Username is the same as the username argument");
+			Assert.AreEqual(p.name, "Bob", "Username is the same as the username argument");
 			Assert.AreEqual(p.x, 0, "X value is 0");
 			Assert.AreEqual(p.y, 0, "Y value is 0");
 			CollectionAssert.AreEqual(p.Moves, new bool[] { false, false, false, false }, "Moves are a list of booleans of length 4. One for each direction");

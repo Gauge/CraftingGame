@@ -1,4 +1,6 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using GameServer.Data;
+using GameServer.Data.Interactables;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -19,7 +21,7 @@ namespace GameServer.Tests {
 			int id = g.addPlayer("Bob");
 			Assert.AreEqual(1, id);
 			Assert.AreEqual(1, g.Players.Count);
-			Assert.AreEqual("Bob", g.Players[0].username);
+			Assert.AreEqual("Bob", g.Players[0].name);
 
 			id = g.addPlayer("Bob");
 			Assert.AreEqual(-1, id);
@@ -28,7 +30,7 @@ namespace GameServer.Tests {
 			id = g.addPlayer("Ted");
 			Assert.AreEqual(3, id);
 			Assert.AreEqual(2, g.Players.Count);
-			Assert.AreEqual("Ted", g.Players[1].username);
+			Assert.AreEqual("Ted", g.Players[1].name);
 		}
 
 		[TestMethod()]
@@ -39,7 +41,7 @@ namespace GameServer.Tests {
 			int id = g.addPlayer(p);
 			Assert.AreEqual(1, id);
 			Assert.AreEqual(1, g.Players.Count);
-			Assert.AreEqual("Bob", g.Players[0].username);
+			Assert.AreEqual("Bob", g.Players[0].name);
 
 			p = new Player(2, "Bob");
 			id = g.addPlayer(p);
@@ -55,7 +57,7 @@ namespace GameServer.Tests {
 			id = g.addPlayer(p);
 			Assert.AreEqual(3, id);
 			Assert.AreEqual(2, g.Players.Count);
-			Assert.AreEqual("Ted", g.Players[1].username);
+			Assert.AreEqual("Ted", g.Players[1].name);
 		}
 
 		[TestMethod()]
@@ -102,7 +104,7 @@ namespace GameServer.Tests {
 
 			Assert.IsNull(g.getPlayerById(-1));
 			Assert.IsNull(g.getPlayerById(8000));
-			Assert.AreEqual("Bob", g.getPlayerById(1).username);
+			Assert.AreEqual("Bob", g.getPlayerById(1).name);
 		}
 
 		[TestMethod()]
@@ -116,7 +118,7 @@ namespace GameServer.Tests {
 			g.loadPlayers(players);
 
 			Assert.IsNull(g.getPlayerByUsername("not a username"));
-			Assert.AreEqual("Ted", g.getPlayerByUsername("Ted").username);
+			Assert.AreEqual("Ted", g.getPlayerByUsername("Ted").name);
 		}
 
 		[TestMethod()]
