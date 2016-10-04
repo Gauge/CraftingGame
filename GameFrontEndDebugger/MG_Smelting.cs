@@ -1,69 +1,88 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Drawing;
 using System.Windows.Forms;
-using GameServer.Data.Interactables;
+using GameServer.Data.MiniGames;
 using GameServer.Data;
+using GameServer.Data.Resources;
+using GameServer.Data.Interactables;
+using Inv = GameServer.Data.Inventory;
 
 namespace GameFrontEndDebugger {
 
 	public partial class MG_Smelting : Form {
-		private enum State { Forground, Background, Dead }
-		private State state;
-		public Smelters game { get; set; }
+		private enum STATE { Forground, Background, Dead }
+		public Smelting game { get; set; }
+		private Player player;
 
 		public MG_Smelting() {
 			InitializeComponent();
-			state = State.Background;
-
-			Application.Idle += new EventHandler(mainLoop);
+			ResourcePanel.MouseDown += select;
+			ResourcePanel.Tag = null;
 		}
 
-		#region game loop setup
+		public void update() {
+			player = ((GameForm)Owner).activePlayer;
 
-		private bool AppStillIdle {
-			get {
-				NativeMessage msg;
-				return !PeekMessage(out msg, IntPtr.Zero, 0, 0, 0);
+			if (player != null && player.ActiveMiniGame != null && !Visible) {
+				this.Show(Owner);
+			} else if (player != null && player.ActiveMiniGame == null && Visible) {
+				this.Hide();
+			}
+
+			if (Visible) {
+				Location = new Point(Owner.Location.X + Owner.Width, Owner.Location.Y + 375);
+				Focus();
+			}
+
+			if (ResourcePanel.Tag == null) {
+				ResourcePanel.BackgroundImage = null;
+			} else {
+				ResourcePanel.BackgroundImage = Assets.getIconById(((Item)ResourcePanel.Tag).id);
+			}
+
+			draw();
+		}
+
+		public void select(object sender, MouseEventArgs e) {
+			((Panel)sender).DoDragDrop(sender, DragDropEffects.All);
+		}
+
+		public void dragOver(object sender, DragEventArgs e) {
+			object o = ((Panel)e.Data.GetData("System.Windows.Forms.Panel")).Tag;
+			if (o.GetType().ToString() == "System.Int32") {
+				int index = (int)o;
+				Item item = ((GameForm)Owner).activePlayer.Inventory[index];
+				if (item is Ore) {
+					e.Effect = DragDropEffects.Move;
+
+				} else {
+					e.Effect = DragDropEffects.None;
+
+				}
 			}
 		}
 
-		[StructLayout(LayoutKind.Sequential)]
-		public struct NativeMessage {
-			public IntPtr hWnd;
-			public uint msg;
-			public IntPtr wParam;
-			public IntPtr lParam;
-			public uint time;
-			public Point p;
+		public void dragComplete(object sender, DragEventArgs e) {
+			object o = ((Panel)sender).Tag;
+			object o2 = ((Panel)e.Data.GetData("System.Windows.Forms.Panel")).Tag;
+
+			if (o == null && o2 is int) {
+				int index = (int)o2;
+				Item item = ((GameForm)Owner).activePlayer.Inventory[index];
+				if (item is Ore) {
+					((Panel)sender).Tag = item;
+					Inv inv = new Inv(Inv.TYPE.Remove, player.id, index);
+					((GameForm)Owner).transmit(inv);
+				}
+			} else if (o is Ore && o2 is int) {
+				((Panel)sender).Tag = null;
+            }
 		}
-
-		[System.Security.SuppressUnmanagedCodeSecurity] // We won’t use this maliciously
-		[DllImport("User32.dll", CharSet = CharSet.Auto)]
-		public static extern bool PeekMessage(out NativeMessage msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, uint flags);
-
-		private void mainLoop(object sender, EventArgs e) {
-			while (AppStillIdle && state != State.Dead) {
-				GameServer.Data.Settings.getDelta(true);
-				draw();
-			}
-
-			if (state == State.Dead) {
-				Dispose();
-			}
-		}
-		#endregion
 
 		private void draw() {
-			if (game != null && game.state == MG_Type_Smelting.Active) {
+			if (game != null && game.state == Smelting.STATE.Active) {
 				Graphics g = Display.CreateGraphics();
 
+				g.DrawLine(Pens.Beige, 50, 50, 200, 200);
 
 			}
 			

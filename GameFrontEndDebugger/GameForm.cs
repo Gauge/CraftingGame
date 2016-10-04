@@ -10,11 +10,10 @@ using Logger = GameFrontEndDebugger.Controls.Logger;
 using System.Runtime.InteropServices;
 using GameServer.Data.Interactables;
 using DeltaTimer = GameServer.Data.Settings;
-using GameServer.Data.Resources;
 
 namespace GameFrontEndDebugger {
 	public partial class GameForm : Form {
-		private enum State {
+		private enum STATE {
 			Connected, Disconnected, Dead
 		};
 
@@ -29,8 +28,8 @@ namespace GameFrontEndDebugger {
 
 		// game data
 		private Game _game;
-		private State state;
-		private Player _activePlayer;
+		private STATE state;
+		public Player activePlayer;
 
 		// display data
 		private long _ping;
@@ -42,21 +41,25 @@ namespace GameFrontEndDebugger {
 		private Logger logger;
 		private TransmitterForm transmitter;
 		private InventoryForm inventoryForm;
+		private MG_Smelting smeltingForm;
 		public Bitmap display { get; set; }
 
 		public GameForm() {
 			DoubleBuffered = true;
 
-			state = State.Disconnected;
+			state = STATE.Disconnected;
 			_game = new Game();
 			_client = new Client();
 			display = new Bitmap(Width, Height);
-			loginForm = new LoginForm();
 			logger = new Logger();
-			transmitter = new TransmitterForm(this);
 			chatInput = new ChatInput();
 			chatDisplay = new ChatDisplay();
+
+			// forms
+			loginForm = new LoginForm();
+			transmitter = new TransmitterForm();
 			inventoryForm = new InventoryForm();
+			smeltingForm = new MG_Smelting();
 
 			chatInput.KeyDown += chatInput_SubmitChat;
 
@@ -69,6 +72,9 @@ namespace GameFrontEndDebugger {
 			connectToServer();
 
 			inventoryForm.Owner = this;
+			smeltingForm.Owner = this;
+			loginForm.Owner = this;
+			transmitter.Owner = this;
 
 			if (Settings.Debug) {
 				transmitter.Show(this);
@@ -103,7 +109,7 @@ namespace GameFrontEndDebugger {
 		public static extern bool PeekMessage(out NativeMessage msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, uint flags);
 
 		private void mainLoop(object sender, EventArgs e) {
-			while (AppStillIdle && state != State.Dead) {
+			while (AppStillIdle && state != STATE.Dead) {
 				DeltaTimer.getDelta(true);
 
 				if (_attemptConnection) {
@@ -112,11 +118,14 @@ namespace GameFrontEndDebugger {
 
 				handleServerMessages();
 				_game.update();
-				inventoryForm.update(_game.getPlayerById(_id));
+				activePlayer = _game.Players.getPlayerById(_id);
+				inventoryForm.update();
+				smeltingForm.update();
+				transmitter.update();
 				draw();
 			}
 
-			if (state == State.Dead) {
+			if (state == STATE.Dead) {
 				Dispose();
 				Application.Exit();
 			}
@@ -135,7 +144,7 @@ namespace GameFrontEndDebugger {
 		}
 
 		private void disconnect() {
-			state = State.Disconnected;
+			state = STATE.Disconnected;
 			_game = new Game();
 			_id = -1;
 			_username = "";
@@ -176,8 +185,12 @@ namespace GameFrontEndDebugger {
 						break;
 
 					case ComType.Inventory:
-						serverInventory((Inventory)com);
+						serverInventory((GameServer.Data.Inventory)com);
                         break;
+
+					case ComType.Interact:
+						_game.Players.setPlayer(((Interact)com).Player);
+						break;
 				}
 			}
 		}  
@@ -186,27 +199,27 @@ namespace GameFrontEndDebugger {
 			if (com.player == null) {
 				throw new ArgumentNullException("Login command from the server returned null");
 			}
-			_game.addPlayer(com.player);
+			_game.Players.addPlayer(com.player);
 		}
 
 		private void serverLogout(Logout com) {
 			if (com.id == _id) {
 				disconnect();
 			}
-			_game.removePlayer(com.id);
+			_game.Players.removePlayer(com.id);
 		}
 
 		private void serverLoadGame(LoadGame com) {
-			_game.loadPlayers(com.players);
+			_game.Players.loadPlayers(com.players);
 			_id = com.id;
-			state = State.Connected;
+			state = STATE.Connected;
 		}
 
 		private void serverMove(Move com) {
 			if (com.x != 0 && com.y != 0) {
-				_game.setPlayerLocation(com.id, com.x, com.y);
+				_game.Players.setPlayerLocation(com.id, com.x, com.y);
 			}
-			_game.setPlayerMove(com.id, com.direction, com.isComplete);
+			_game.Players.setPlayerMove(com.id, com.direction, com.isComplete);
 		}
 
 		private void serverChat(Chat com) {
@@ -225,27 +238,19 @@ namespace GameFrontEndDebugger {
 			_ping = (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - com.timestamp;
 		}
 
-		private void serverInventory(Inventory com) {
-			Player p = _game.getPlayerById(_id);
-			p.Inventory = com.updatedInventory;
-		}
-
-		public void combineInventoryItems(int index1, int index2) {
-			if (!_client.IsConnected)
-				return;
-			Player p = _game.getPlayerById(_id);
-			p.moveCombineItem(index1, index2);
-
-			_client.send(new Inventory(InvType.Combine, _id, index1, index2).toByteArray());
+		private void serverInventory(GameServer.Data.Inventory com) {
+			activePlayer.Inventory.initialize(com.updatedInventory);
 		}
 
 		#endregion
 
 		#region controller
 		public void transmit(string data) {
-			if (state == State.Connected) {
-				_client.send(data);
-			}
+			_client.send(data);
+		}
+
+		public void transmit(BaseCommand com) {
+			_client.send(com.toByteArray());
 		}
 
 		public void connect(string address, int port, string username, string password) {
@@ -260,16 +265,16 @@ namespace GameFrontEndDebugger {
 			Direction dir = Settings.keyDirection(e.KeyCode);
 
 			if (dir != Direction.None) {
-				if (_game.getPlayerById(_id).Moves[(int)dir] == isComplete) {
-					_game.setPlayerMove(_id, dir, isComplete);
-					_client.send(new Move(_id, dir, isComplete).toByteArray());
+				if (_game.Players.getPlayerById(_id).Moves[(int)dir] == isComplete) {
+					_game.Players.setPlayerMove(_id, dir, isComplete);
+					transmit(new Move(_id, dir, isComplete));
 				}
 			}
 		}
 
 		private void GameApplication_FormClosing(object sender, FormClosingEventArgs e) {
-			_client.send(new Logout().toByteArray());
-			state = State.Dead;
+			transmit(new Logout());
+			state = STATE.Dead;
 		}
 
 		private void GameApplication_KeyDown(object sender, KeyEventArgs e) {
@@ -288,10 +293,7 @@ namespace GameFrontEndDebugger {
 			}
 
 			if (e.KeyCode == Keys.E) {
-				
-				Kiln k = (Kiln)_game.Tools[0];
-				k.ore = ((Ore)_activePlayer.Inventory[0]);
-				k.startGame();
+				transmit(new Interact());
             }
 
 			sendMove(e, false);
@@ -304,7 +306,7 @@ namespace GameFrontEndDebugger {
 		private void chatInput_SubmitChat(object sender, KeyEventArgs e) {
 			if ((e.KeyCode == Keys.Return || e.KeyCode == Keys.Enter) && chatInput.Text != "") {
 				Chat chat = new Chat(_id, _username, chatInput.Text);
-				_client.send(chat.toByteArray());
+				transmit(chat);
 
 				string data = "";
 				if (chat.chatType == ChatType.Whisper) {
@@ -327,7 +329,7 @@ namespace GameFrontEndDebugger {
 		}
 
 		private void pingger_Tick(object sender, EventArgs e) {
-			_client.send(new Ping(_id).toByteArray());
+			transmit(new Ping(_id));
 		}
 
 		#endregion
@@ -370,8 +372,8 @@ namespace GameFrontEndDebugger {
 
 		private RectangleF translateToCameraView(double x, double y, double width, double height) {
 			RectangleF r = new RectangleF();
-			r.X = ((Width / 2) - ((float)(_activePlayer.x - x) * Settings.UNIT)) - (float)(Settings.UNIT* width / 2);
-			r.Y = ((Height / 2) - ((float)(_activePlayer.y - y) * Settings.UNIT)) - (float)(Settings.UNIT* height / 2);
+			r.X = ((Width / 2) - ((float)(activePlayer.x - x) * Settings.UNIT)) - (float)(Settings.UNIT* width / 2);
+			r.Y = ((Height / 2) - ((float)(activePlayer.y - y) * Settings.UNIT)) - (float)(Settings.UNIT* height / 2);
 			r.Width = (float)(Settings.UNIT * width);
 			r.Height = (float)(Settings.UNIT * height);
 			return r;
@@ -384,14 +386,13 @@ namespace GameFrontEndDebugger {
 		private Pen _highlightPen = new Pen(Color.FromArgb(50, 0, 255, 0), 3);
 		private Pen _nonHighlightPen = new Pen(Color.FromArgb(25, 0, 0, 0), 3);
 		private void draw() {
-			if (state == State.Disconnected) {
+			if (state == STATE.Disconnected) {
 				connectToServer();
 				return;
 			} else {
 				loginForm.Hide();
 			}
 
-			_activePlayer = _game.getPlayerById(_id);
 			Graphics g = Graphics.FromImage(display);
 
 			g.FillRectangle(Brushes.Gray, new RectangleF(0, 0, Width, Height)); // create background
@@ -425,17 +426,17 @@ namespace GameFrontEndDebugger {
 				RectangleF rect = translateToCameraView(p.x, p.y, 1, 1);
                 g.FillRectangle(Brushes.Red, rect);
 
-				SizeF textSize = g.MeasureString(_activePlayer.name, _font);
+				SizeF textSize = g.MeasureString(activePlayer.name, _font);
 				g.DrawString(p.name, _font, Brushes.GreenYellow, (rect.X - (textSize.Width / 2)) + (Settings.UNIT/2), (rect.Y + (textSize.Height / 2)) + (Settings.UNIT/2));
 			}
 		}
 
 		private void drawInteractables(Graphics g) {
-			foreach (Interactable obj in _game.Tools) {
+			foreach (GameObject obj in _game.GameObjects) {
 				g.DrawImage(Assets.getIconById(obj.id), translateToCameraView(obj.x, obj.y, 2, 2));
 
 				if (Settings.Debug) {
-					if (obj.isInRange(_activePlayer)) {
+					if (obj.isInRange(activePlayer)) {
 						g.FillEllipse(_highlightBrush, translateToCameraView(obj.x, obj.y, obj.actionRadious, obj.actionRadious));
 						g.DrawEllipse(_highlightPen, translateToCameraView(obj.x, obj.y, obj.actionRadious, obj.actionRadious));
 					} else {
@@ -458,7 +459,7 @@ namespace GameFrontEndDebugger {
 			debugStrings[0] = "Fps: " + _fps;
 			debugStrings[1] = "Ping: " + _ping;
 			debugStrings[2] = "Active Players: " + _game.Players.Count;
-			debugStrings[3] = "Location: " + _game.getPlayerById(_id).x + ":" + _game.getPlayerById(_id).y;
+			debugStrings[3] = "Location: " + _game.Players.getPlayerById(_id).x + ":" + _game.Players.getPlayerById(_id).y;
 
 			for (int i = 0; i < debugStrings.Length; i++) {
 				string s = debugStrings[i];

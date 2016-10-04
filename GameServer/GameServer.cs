@@ -107,8 +107,8 @@ namespace GameServer {
 			foreach (User user in _toRemove) {
 				string formattedName = "";
 				if (user.id != -1) {
-					formattedName = "| " + _game.getPlayerById(user.id).name;
-					_game.removePlayer(user.id);
+					formattedName = "| " + _game.Players.getPlayerById(user.id).name;
+					_game.Players.removePlayer(user.id);
 					_outGoing.Add(new OutGoing(_users, new Logout(user.id)));
 				}
 				Console.WriteLine("DISSCONECTED\t {0} {1}", user.location, formattedName);
@@ -176,7 +176,7 @@ namespace GameServer {
 						break;
 
 					case ComType.Inventory:
-						userInventory(sender, (Inventory)com);
+						userInventory(sender, (Data.Inventory)com);
 						break;
 
 					case ComType.Move:
@@ -194,7 +194,7 @@ namespace GameServer {
 		private void userLogin(User sender, Login com) {
 			int id;
 
-			if ((id = _game.addPlayer(com.username)) != -1) {
+			if ((id = _game.Players.addPlayer(com.username)) != -1) {
 				// update user
 				int sendersUserIndex = _users.FindIndex(u => u.location == sender.location);
 				sender.id = id;
@@ -208,7 +208,7 @@ namespace GameServer {
 				// send to everyone accept the user logging in
 				List<User> subUsers = _users.FindAll(u => u.id != id);
 				if (subUsers.Count > 0) {
-					Login response = new Login(id, _game.getPlayerById(id));
+					Login response = new Login(id, _game.Players.getPlayerById(id));
 					_outGoing.Add(new OutGoing(subUsers, response));
 				}
 
@@ -226,7 +226,7 @@ namespace GameServer {
 				_outGoing.Add(new OutGoing(_users, com));
 
 			} else if (com.chatType == ChatType.Whisper) {
-				int id = _game.getIdByUsername(com.recipient);
+				int id = _game.Players.getIdByUsername(com.recipient);
 				User recipient = _users.Find(u => u.id == id);
 				if (recipient == null) {
 					Chat c = new Chat("Recipient: " + com.recipient + "does not exist");
@@ -237,18 +237,37 @@ namespace GameServer {
 			}
 		}
 
-		private void userInventory(User sender, Inventory com) {
-			Player p = _game.getPlayerById(sender.id);
+		private void userInventory(User sender, Data.Inventory com) {
+			Player p = _game.Players.getPlayerById(sender.id);
+			switch (com.invType) {
 
-			p.moveCombineItem(com.itemIndex1, com.itemIndex2);
-			com.updatedInventory = p.Inventory;
+				case Data.Inventory.TYPE.Move:
+					p.Inventory.move(com.itemIndex1, com.itemIndex2);
+					break;
+
+				case Data.Inventory.TYPE.Add:
+					p.Inventory.add(com.itemIndex1, com.item);
+					break;
+
+				case Data.Inventory.TYPE.Remove:
+					p.Inventory.remove(com.itemIndex1);
+					break;
+
+				case Data.Inventory.TYPE.Combine:
+					break;
+
+				case Data.Inventory.TYPE.Split:
+					break;
+
+			}
+			com.updatedInventory = p.Inventory.getArray();
 			_outGoing.Add(new OutGoing(sender.location, com));
 		}
 
 		private void userMove(User sender, Move com) {
-			_game.setPlayerMove(com.id, com.direction, com.isComplete);
+			_game.Players.setPlayerMove(com.id, com.direction, com.isComplete);
 
-			Player p = _game.getPlayerById(sender.id);
+			Player p = _game.Players.getPlayerById(sender.id);
 			_outGoing.Add(new OutGoing(_users, new Move(com.id, com.direction, com.isComplete, p.x, p.y)));
 		}
 
@@ -257,7 +276,18 @@ namespace GameServer {
 		}
 
 		private void userInteract(User sender, Interact com) {
+			Player p = _game.Players.getPlayerById(sender.id);
 
+			List<GameObject> objects = _game.GameObjects.getGameObjectsInRange(p);
+
+			foreach (GameObject thing in objects) {
+				if (thing.name == "Kiln") {
+					p.ActiveMiniGame = ((Kiln)thing).game;
+                }
+			}
+
+			com.Player = p;
+			_outGoing.Add(new OutGoing(sender.location, com));
 		}
 
 		private void sendDataToClients() {

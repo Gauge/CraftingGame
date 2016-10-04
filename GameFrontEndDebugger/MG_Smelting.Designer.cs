@@ -31,11 +31,17 @@
 			// 
 			// ResourcePanel
 			// 
+			this.ResourcePanel.AllowDrop = true;
 			this.ResourcePanel.BackColor = System.Drawing.Color.White;
+			this.ResourcePanel.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
 			this.ResourcePanel.Location = new System.Drawing.Point(46, 181);
 			this.ResourcePanel.Name = "ResourcePanel";
 			this.ResourcePanel.Size = new System.Drawing.Size(50, 50);
 			this.ResourcePanel.TabIndex = 0;
+			this.ResourcePanel.Tag = "";
+			this.ResourcePanel.DragDrop += new System.Windows.Forms.DragEventHandler(this.dragComplete);
+			this.ResourcePanel.DragOver += new System.Windows.Forms.DragEventHandler(this.dragOver);
+			this.ResourcePanel.MouseDown += new System.Windows.Forms.MouseEventHandler(this.select);
 			// 
 			// label1
 			// 

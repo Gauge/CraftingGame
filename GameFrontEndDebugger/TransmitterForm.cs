@@ -10,14 +10,17 @@ using System.Windows.Forms;
 
 namespace GameFrontEndDebugger {
 	public partial class TransmitterForm : Form {
-		public TransmitterForm(Form owner) {
-			Location = new Point(owner.Location.X - Width, owner.Location.Y);
+		public TransmitterForm() {
 			InitializeComponent();
 		}
 
 		private void transmitButton_Click(object sender, EventArgs e) {
 			((GameForm)Owner).transmit(dataTextBox.Text);
 			dataTextBox.SelectAll();
+		}
+
+		public void update() {
+			Location = new Point(Owner.Location.X - Width, Owner.Location.Y);
 		}
 	}
 }

@@ -3,6 +3,7 @@ using System.Text;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using GameServer.Data.Interactables;
+using GameServer.Data.Errors;
 
 namespace GameServer.Data {
 
@@ -15,12 +16,6 @@ namespace GameServer.Data {
 	public enum ChatType {
 		System, Global, Whisper
 	};
-	public enum InvType {
-		Combine, Split
-	};
-	public enum MG_Type_Smelting {
-		Setup, Active, Complete
-	}
 
 	public abstract class BaseCommand {
 		public ComType type { get; }
@@ -194,29 +189,36 @@ namespace GameServer.Data {
 
 	public class Inventory : BaseCommand {
 
-		public InvType invType;
+		public enum TYPE { Add, Remove, Move, Combine, Split }
+
+		public TYPE invType;
 		public int itemIndex1 { get; set; }
 		public int itemIndex2 { get; set; }
+		public Item item { get; set; }
 		public List<Item> updatedInventory { get; set; }
 
-		public Inventory(InvType invType, int id, int itemIndex1, int itemIndex2 = -1, List<Item> updatedInventory = null, long timestamp = 0) : base(ComType.Inventory, id, timestamp) {
+		public Inventory(TYPE invType, int id, int itemIndex1 = -1, int itemIndex2 = -1, Item item = null, List<Item> updatedInventory = null, long timestamp = 0) : base(ComType.Inventory, id, timestamp) {
 			this.invType = invType;
 			this.itemIndex1 = itemIndex1;
 			this.itemIndex2 = itemIndex2;
+			this.item = item;
 			this.updatedInventory = updatedInventory;
 		}
 
 		public override string ToString() {
-			return "Inventory\t" + invType.ToString() + "\tIndex1: " + itemIndex1 + "\tIndex2: " + itemIndex2;
-			;
+			return base.ToString() + "\tInvType: " + invType.ToString() + "\tIndex1: " + itemIndex1 + "\tIndex2: " + itemIndex2;
 		}
 	}
 
 	public class Interact : BaseCommand {
-		public int interactableIndex { get; set; }
+		public Player Player { get; set; }
 
-		public Interact(int interactableIndex) : base(ComType.Interact, -1, Settings.getTimestamp()) {
-			this.interactableIndex = interactableIndex;
+		public Interact(Player p = null) : base(ComType.Interact, -1, Settings.getTimestamp()) {
+			Player = p;
+        }
+
+		public override string ToString() {
+			return base.ToString() + "\tPlayer: " + Player;
 		}
 	}
 
@@ -226,7 +228,7 @@ namespace GameServer.Data {
 		}
 	}
 
-	public class MG_Smelting : BaseCommand {
+/*	public class MG_Smelting : BaseCommand {
 
 		public MG_Type_Smelting state { get; }
 		public bool isActive { get; }
@@ -237,6 +239,6 @@ namespace GameServer.Data {
 			this.state = state;
 			this.temprature = temprature;
 		}
-	}
+	}*/
 
 }

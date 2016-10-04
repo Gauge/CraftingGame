@@ -1,22 +1,16 @@
-﻿using GameServer;
-using GameServer.Data;
+﻿using GameServer.Data;
 using GameServer.Data.Interactables;
-using System;
 using System.Drawing;
-using System.IO;
-using System.Reflection;
 using System.Windows.Forms;
+using Inv = GameServer.Data.Inventory;
 
 namespace GameFrontEndDebugger {
 	public partial class InventoryForm : Form {
 
 		public int width { get; }
-		public int height { get;  }
+		public int height { get; }
 		private Panel[] panels = new Panel[30];
-
-		private int selectedPanel = -1;
-		private int secondaryPanel = -1;
-
+		private Player player;
 
 		public InventoryForm() {
 
@@ -48,31 +42,45 @@ namespace GameFrontEndDebugger {
 		}
 
 		public void select(object sender, MouseEventArgs e) {
-			selectedPanel = (int)((Panel)sender).Tag;
+			//selectedPanel = (int)((Panel)sender).Tag;
 			((Panel)sender).DoDragDrop(sender, DragDropEffects.All);
         }
 
 		public void dragOver(object sender, DragEventArgs e) {
-			secondaryPanel = (int)((Panel)sender).Tag;
+			//secondaryPanel = (int)((Panel)sender).Tag;
+
 			e.Effect = DragDropEffects.Move;
 		}
 
 		public void dragComplete(object sender, DragEventArgs e) {
-            if (selectedPanel != -1 && selectedPanel != secondaryPanel) {
-				((GameForm)Owner).combineInventoryItems(selectedPanel, secondaryPanel);
+			object o = ((Panel)sender).Tag;
+			object o2 = ((Panel)e.Data.GetData("System.Windows.Forms.Panel")).Tag;
+
+			if (o is int && o2 is Item) {
+				Item eItem = (Item)((Panel)e.Data.GetData("System.Windows.Forms.Panel")).Tag;
+				Inv inv = new Inv(Inv.TYPE.Add, player.id, (int)o, item: eItem);
+				((GameForm)Owner).transmit(inv);
+
+
+			} else if (o is int && o2 is int && !o.Equals(o2)) {
+				Inv inv = new Inv(Inv.TYPE.Move, player.id, (int)o, (int)o2);
+				((GameForm)Owner).transmit(inv);
 			}
-			selectedPanel = -1;
-			secondaryPanel = -1;
+			//selectedPanel = secondaryPanel = -1;
 		}
 
-		public void update(Player active) {
+
+
+		public void update() {
+			player = ((GameForm)Owner).activePlayer;
+
 			if (Visible) {
 				Location = new Point(Owner.Location.X + Owner.Width, Owner.Location.Y);
 			}
 
-			if (active != null) {
-				for (int i = 0; i < active.Inventory.Count; i++) {
-					Item item = active.Inventory[i];
+			if (player != null) {
+				for (int i = 0; i < player.Inventory.Count; i++) {
+					Item item = player.Inventory[i];
 					Panel p = panels[i];
 
 					if (item == null) {

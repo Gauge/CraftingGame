@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 
 namespace GameServer.Data.Interactables {
-	public class Controllable : Interactable {
+	public class Pawn : GameObject {
 		public const int movementSpeed = 750; // this is temp till i get other matter settled with
 		public const int speedPerUnit = 100;
 		public List<bool> Moves { get; private set; }
 
 
-		public Controllable(int id, string name, int x, int y) : base(id, name, x, y) {
+		public Pawn(int id, string name, int x, int y) : base(id, name, x, y) {
 			Moves = new List<bool> { false, false, false, false };
 		}
 
@@ -24,7 +24,7 @@ namespace GameServer.Data.Interactables {
 			return false;
 		}
 
-		public void update() {
+		public virtual void update() {
 			double delta = Settings.getDelta();
 			double amountToMove = (((movementSpeed / speedPerUnit) * delta) / 1000);
 

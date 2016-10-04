@@ -51,10 +51,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Data\Interactables\Controllable.cs" />
+    <Compile Include="Data\Errors\InventoryArgumentException.cs" />
+    <Compile Include="Data\Errors\InventoryCombinationException.cs" />
+    <Compile Include="Data\Errors\MiniGameItemAddError.cs" />
+    <Compile Include="Data\Interactables\LGameObject.cs" />
+    <Compile Include="Data\Interactables\Inventory.cs" />
+    <Compile Include="Data\Interactables\Pawn.cs" />
+    <Compile Include="Data\Interactables\LPlayer.cs" />
     <Compile Include="Data\Interactables\Kiln.cs" />
+    <Compile Include="Data\MiniGames\MiniGame.cs" />
+    <Compile Include="Data\MiniGames\Smelting.cs" />
     <Compile Include="Data\Resources\Item.cs" />
-    <Compile Include="Data\Interactables\Smelters.cs" />
     <Compile Include="Data\Resources\Ore.cs" />
     <Compile Include="Data\Settings.cs" />
     <Compile Include="GameServer.cs" />
@@ -72,11 +79,9 @@
     <Compile Include="Data\ComData.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Data\Interactables\Interactable.cs" />
+    <Compile Include="Data\Interactables\GameObject.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Data\Errors\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

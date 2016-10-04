@@ -18,16 +18,16 @@ namespace GameServer.Tests {
 		public void addPlayerTest() {
 			Game g = new Game();
 
-			int id = g.addPlayer("Bob");
+			int id = g.Players.addPlayer("Bob");
 			Assert.AreEqual(1, id);
 			Assert.AreEqual(1, g.Players.Count);
 			Assert.AreEqual("Bob", g.Players[0].name);
 
-			id = g.addPlayer("Bob");
+			id = g.Players.addPlayer("Bob");
 			Assert.AreEqual(-1, id);
 			Assert.AreEqual(1, g.Players.Count);
 
-			id = g.addPlayer("Ted");
+			id = g.Players.addPlayer("Ted");
 			Assert.AreEqual(3, id);
 			Assert.AreEqual(2, g.Players.Count);
 			Assert.AreEqual("Ted", g.Players[1].name);
@@ -38,18 +38,18 @@ namespace GameServer.Tests {
 			Game g = new Game();
 
 			Player p = new Player(1, "Bob");
-			int id = g.addPlayer(p);
+			int id = g.Players.addPlayer(p);
 			Assert.AreEqual(1, id);
 			Assert.AreEqual(1, g.Players.Count);
 			Assert.AreEqual("Bob", g.Players[0].name);
 
 			p = new Player(2, "Bob");
-			id = g.addPlayer(p);
+			id = g.Players.addPlayer(p);
 			Assert.AreEqual(-1, id);
 			Assert.AreEqual(1, g.Players.Count);
 
 			p = new Player(1, "Jim");
-			id = g.addPlayer(p);
+			id = g.Players.addPlayer(p);
 			Assert.AreEqual(-1, id);
 			Assert.AreEqual(1, g.Players.Count);
 

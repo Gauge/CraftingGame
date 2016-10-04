@@ -30,13 +30,18 @@
 			this.meltingPoint = meltingPoint;
 		}
 
-		public bool add(double weight, double purity) {
+		public Ore add(double weight, double purity) {
 			if (weight > 0 && purity >= 0 && purity <= 1) {
 				this.purity = (this.purity + purity) / 2;
 				this.weight = this.weight + weight;
-				return true;
 			}
-			return false;
+			// if the value is over max weight retrun what is left over
+			if (weight > MAX_WEIGHT) {
+				Ore remaining = new Ore(id, name, value, weight - MAX_WEIGHT, description, purity, meltingPoint);
+				this.weight = MAX_WEIGHT;
+				return remaining;
+			}
+			return null;
 		}
 
 		public bool remove(double weight) {
