@@ -54,15 +54,6 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="Data\ChatTests.cs" />
-    <Compile Include="Data\GameTests.cs" />
-    <Compile Include="Data\LoadGameTests.cs" />
-    <Compile Include="Data\LoginTests.cs" />
-    <Compile Include="Data\LogoutTests.cs" />
-    <Compile Include="Data\MoveTests.cs" />
-    <Compile Include="Data\OreTests.cs" />
-    <Compile Include="Data\PingTests.cs" />
-    <Compile Include="Data\PlayerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

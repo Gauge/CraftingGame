@@ -3,7 +3,7 @@ using System.Text;
 using System.Net;
 using System.Net.Sockets;
 using System.Collections.Generic;
-using System.Threading;
+using System.Threading.Tasks;
 
 namespace GameServer.Networking {
 	public class Client {
@@ -11,13 +11,13 @@ namespace GameServer.Networking {
 		private UdpClient _socket;
 		private IPHostEntry _serverLocation;
 		private int _port;
-		private List<Message> _messages;
-		private Thread _listener;
+		private Dictionary<IPEndPoint, byte[]> _messages;
+		private Task _listener;
 		private IPEndPoint _server;
 		private bool _isListening;
 
 		public bool IsConnected {
-			get { return (_listener != null && _listener.IsAlive && _isListening); }
+			get { return (_listener != null && _listener.Status == TaskStatus.Running && _isListening); }
 		}
 
 		public string Address {
@@ -36,14 +36,14 @@ namespace GameServer.Networking {
 			}
 		}
 
-		public List<Message> PendingMessages {
+		public Dictionary<IPEndPoint, byte[]> PendingMessages {
 			get {
 				if (_messages.Count > 0) {
-					List<Message> m = _messages;
-					_messages = new List<Message>();
+					Dictionary<IPEndPoint, byte[]> m = _messages;
+					_messages = new Dictionary<IPEndPoint, byte[]>();
 					return m;
 				}
-				return new List<Message>();
+				return new Dictionary<IPEndPoint, byte[]>();
 			}
 		}
 
@@ -51,14 +51,14 @@ namespace GameServer.Networking {
 			_port = 0;
 			_serverLocation = Dns.GetHostEntry("");
 			_socket = new UdpClient();
-			_messages = new List<Message>();
+			_messages = new Dictionary<IPEndPoint, byte[]>();
 		}
 
 		public Client(string hostname, int port) {
 			_port = port;
 			_serverLocation = Dns.GetHostEntry(hostname);
 			_socket = new UdpClient();
-			_messages = new List<Message>();
+			_messages = new Dictionary<IPEndPoint, byte[]>();
 			updateConnection();
 		}
 
@@ -75,14 +75,15 @@ namespace GameServer.Networking {
 		public void Start() {
 			updateConnection();
 			_isListening = true;
-			_listener = new Thread(new ThreadStart(this.listenForServerData));
+			_listener = new Task(listenForServerData);
 			_listener.Start();
 		}
 
 		public void Stop() {
 			_socket.Close();
 			_isListening = false;
-			_listener = null;
+			Task.WaitAll(_listener);
+			_listener.Dispose();
 		}
 
 		private void listenForServerData() {
@@ -90,7 +91,7 @@ namespace GameServer.Networking {
 			while (_isListening) {
 				try {
 					byte[] data = _socket.Receive(ref _server);
-					_messages.Add(new Message(data, _server));
+					_messages.Add(_server, data);
 				} catch {
 					Stop();
 				}

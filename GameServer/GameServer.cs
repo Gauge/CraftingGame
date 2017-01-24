@@ -3,225 +3,327 @@ using System.Collections.Generic;
 using System.Net;
 using GameServer.Networking;
 using GameServer.Data;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using GameServer.Data.Errors;
 using GameServer.Data.Interactables;
 
-namespace GameServer {
-	public class GameServer {
+namespace GameServer
+{
+    public class GameServer
+    {
 
-		private class OutGoing {
-			public IPEndPoint[] clients;
-			public BaseCommand data;
+        private class OutGoing
+        {
+            public IPEndPoint[] clients;
+            public JObject data;
 
-			public OutGoing(IPEndPoint[] recipients, BaseCommand com) {
-				clients = recipients;
-				data = com;
-			}
+            public OutGoing(IPEndPoint[] recipients, JObject com)
+            {
+                clients = recipients;
+                data = com;
+            }
 
-			public OutGoing(IPEndPoint recipient, BaseCommand com) {
-				clients = new IPEndPoint[] { recipient };
-				data = com;
-			}
+            public OutGoing(IPEndPoint recipient, JObject com)
+            {
+                clients = new IPEndPoint[] { recipient };
+                data = com;
+            }
 
-			public OutGoing(List<User> recipients, BaseCommand com) {
-				clients = User.getEndPointArray(recipients);
-				data = com;
-			}
+            public OutGoing(List<User> recipients, JObject com)
+            {
+                clients = User.getEndPointArray(recipients);
+                data = com;
+            }
 
-			public override string ToString() {
-				return data.ToString() + " to " + clients.Length + " Clients";
-			}
-		}
+            public override string ToString()
+            {
+                return data.ToString() + " to " + clients.Length + " Clients";
+            }
+        }
 
-		private class User {
-			public string name;
-			public IPEndPoint location;
-			public int id;
-			public long lastMessage;
+        private class User
+        {
+            public IPEndPoint location;
+            public int id;
+            public long lastMessage;
 
-			public bool TimedOut {
-				get {
-					return (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - lastMessage >= CLIENT_TIMEOUT;
-				}
-			}
-
-			public User(int id, IPEndPoint location, long lastMessage) {
-				this.location = location;
-				this.id = id;
-				this.lastMessage = lastMessage;
-			}
-
-			public static IPEndPoint[] getEndPointArray(List<User> users) {
-				IPEndPoint[] endPoints = new IPEndPoint[users.Count];
-				for (int i = 0; i < users.Count; i++) {
-					endPoints[i] = users[i].location;
-				}
-				return endPoints;
-			}
-		}
-
-		public const long CLIENT_TIMEOUT = 120000;
-
-		private List<User> _users;
-		private Server _server;
-		private Game _game;
-		private List<Message> _inComing;
-		private List<OutGoing> _outGoing;
-		private List<User> _toRemove;
-
-
-		public GameServer() {
-			_users = new List<User>();
-			_server = new Server(1234);
-			_game = new Game();
-			_inComing = new List<Message>();
-			_outGoing = new List<OutGoing>();
-			_toRemove = new List<User>();
-
-			_server.Start();
-			mainLoop();
-		}
-
-		private void mainLoop() {
-			Console.WriteLine("Starting game loop...");
-			while (true) {
-				Settings.getDelta(true);
-				handleRemovedClients();
-				handleClientData();
-				updateClientRequests();
-				_game.update();
-				sendDataToClients();
-				checkForDissconnects();
-
-			}
-		}
-
-		private void checkForDissconnects() {
-			foreach (User u in _users) {
-				if (u.TimedOut)
-					_toRemove.Add(u);
-			}
-		}
-
-		private void handleRemovedClients() {
-
-			foreach (User user in _toRemove) {
-				string formattedName = "";
-				if (user.id != -1) {
-					formattedName = "| " + _game.Players.getPlayerById(user.id).name;
-					_game.Players.removePlayer(user.id);
-					_outGoing.Add(new OutGoing(_users, new Logout(user.id)));
-				}
-				Console.WriteLine("DISSCONECTED\t {0} {1}", user.location, formattedName);
-				_users.Remove(user);
-			}
-			_toRemove.Clear();
-		}
-
-		private void handleClientData() {
-			List<Message> messages = _server.PendingMessages;
-
-			for (int i = 0; i < messages.Count; i++) {
-				Message m = messages[i];
-				try {
-					BaseCommand com = BaseCommand.fromByteArray(m.data);
-					// add new users
-					User temp = new User(-1, m.sender, com.timestamp);
-					if (!_users.Exists(u => u.location.Equals(temp.location))) {
-						_users.Add(temp);
-					}
-
-					m.parsed = com;
-					_inComing.Add(m);
-
-				} catch (Exception e) {
-					Console.WriteLine(e.ToString());
-				}
-			}
-		}
-
-		private void updateClientRequests() {
-
-			foreach (Message m in _inComing) {
-				int userIndex = _users.FindIndex(u => u.location.Equals(m.sender));
-				BaseCommand com = m.parsed;
-				User sender = _users[userIndex];
-
-				if (com.type != ComType.Ping)
-					sender.lastMessage = com.timestamp;
-
-				if (sender.id == -1 && (com.type != ComType.Login && com.type != ComType.Logout && com.type != ComType.Ping)) {
-					Console.WriteLine("{0} | sent the command: {2} without first logging in", m.sender, com.type.ToString());
-					userLogout(sender, (Logout)com);
-					continue;
-				}
-
-				if (com.type != ComType.Ping && com.type != ComType.Login && com.type != ComType.Logout)
-					Console.WriteLine(com.ToString());
-
-				switch (com.type) {
-					case ComType.Ping:
-						userPing(sender, (Ping)com);
-						break;
-
-					case ComType.Login:
-						userLogin(sender, (Login)com);
-						break;
-
-					case ComType.Logout:
-						userLogout(sender, (Logout)com);
-						break;
-
-					case ComType.Chat:
-						userChat(sender, (Chat)com);
-						break;
-
-					case ComType.Inventory:
-						userInventory(sender, (Data.Inventory)com);
-						break;
-
-					case ComType.Move:
-						userMove(sender, (Move)com);
-						break;
-
-					case ComType.Interact:
-						userInteract(sender, (Interact)com);
-						break;
+            public bool TimedOut
+            {
+                get
+                {
+                    return Helper.getTimestamp() - lastMessage >= CLIENT_TIMEOUT;
                 }
-			}
-			_inComing.Clear();
-		}
+            }
 
-		private void userLogin(User sender, Login com) {
-			int id;
+            public User(int id, IPEndPoint location, long lastMessage)
+            {
+                this.location = location;
+                this.id = id;
+                this.lastMessage = lastMessage;
+            }
 
-			if ((id = _game.Players.addPlayer(com.username)) != -1) {
-				// update user
-				int sendersUserIndex = _users.FindIndex(u => u.location == sender.location);
-				sender.id = id;
-				sender.name = com.username;
-				_users[sendersUserIndex] = sender;
-				Console.WriteLine("CONNECTED\t {0} | {1}", sender.location, com.username);
+            public static IPEndPoint[] getEndPointArray(List<User> users)
+            {
+                IPEndPoint[] endPoints = new IPEndPoint[users.Count];
+                for (int i = 0; i < users.Count; i++)
+                {
+                    endPoints[i] = users[i].location;
+                }
+                return endPoints;
+            }
+        }
 
-				// let the user know they are logged in
-				_outGoing.Add(new OutGoing(sender.location, new LoadGame(sender.id, _game.Players)));
+        public const long CLIENT_TIMEOUT = 120000;
 
-				// send to everyone accept the user logging in
-				List<User> subUsers = _users.FindAll(u => u.id != id);
-				if (subUsers.Count > 0) {
-					Login response = new Login(id, _game.Players.getPlayerById(id));
-					_outGoing.Add(new OutGoing(subUsers, response));
-				}
+        private List<User> _users;
+        private Server _server;
+        private Game _game;
+        private Dictionary<IPEndPoint, byte[]> _inComing;
+        private List<OutGoing> _outGoing;
+        private List<User> _toRemove;
 
-			} else {
-				Console.WriteLine("Username needs to be unique. Eventually there will be an error message");
-			}
-		}
 
-		private void userLogout(User sender, Logout com) {
-			_toRemove.Add(sender);
-		}
+        public GameServer()
+        {
+            _users = new List<User>();
+            _server = new Server(1234);
+            _game = new Game();
+            _inComing = new Dictionary<IPEndPoint, byte[]>();
+            _outGoing = new List<OutGoing>();
+            _toRemove = new List<User>();
 
-		private void userChat(User sender, Chat com) {
+            _server.Start();
+            mainLoop();
+        }
+
+        private void mainLoop()
+        {
+            Console.WriteLine("Starting game loop...");
+            while (true)
+            {
+                Helper.getDelta(true);
+                handleRemovedClients();
+                handleClientData();
+                updateClientRequests();
+                _game.update();
+                sendDataToClients();
+                //checkForDissconnects();
+
+            }
+        }
+
+        private void checkForDissconnects()
+        {
+            foreach (User u in _users)
+            {
+                if (u.TimedOut)
+                    _toRemove.Add(u);
+            }
+        }
+
+        private void handleRemovedClients()
+        {
+
+            foreach (User user in _toRemove)
+            {
+                string username = "";
+                if (user.id != -1)
+                {
+                    username = _game.Players.getPlayerById(user.id).name;
+                    _game.Players.removePlayer(user.id);
+                    _outGoing.Add(new OutGoing(_users, Transmition.Logout.Create(user.id)));
+
+                    Logger.Log(Logger.LogLevel.normal, Logger.Type.DISCONNECTED, string.Format("{0} | {1}", user.location, username));
+                    _users.Remove(user);
+                }
+                else
+                {
+                    _users.Remove(user);
+                }
+            }
+            _toRemove.Clear();
+        }
+
+        private void handleClientData()
+        {
+            Dictionary<IPEndPoint, byte[]> messages = _server.PendingMessages;
+
+            foreach (KeyValuePair<IPEndPoint, byte[]> m in messages)
+            {
+                try
+                {
+                    JObject com = Transmition.Parse(m.Value);
+                    // add new users
+                    User temp = new User(-1, m.Key, Helper.getTimestamp());
+                    if (!_users.Exists(u => u.location.Equals(temp.location)))
+                    {
+                        _users.Add(temp);
+                    }
+                    _inComing.Add(m.Key, m.Value);
+
+                }
+                catch (JsonReaderException e)
+                {
+                    JObject error = Transmition.Error.Create("InvalidTransmition", 900, "The received transmition was unable to be parsed");
+                    _outGoing.Add(new OutGoing(m.Key, error));
+
+                    Logger.Log(Logger.LogLevel.debug, Logger.Type.ERROR, string.Format("InvalidTransmition\tFrom: {0}", m.Key));
+                }
+                catch (TransmitionValidationException e)
+                {
+                    JObject error = Transmition.Error.Create("TransmitionValidationException", 901, e.Message);
+                    _outGoing.Add(new OutGoing(m.Key, error));
+
+                    Logger.Log(Logger.LogLevel.debug, Logger.Type.ERROR, string.Format("TransmitionValidationException\t From: {0}", m.Key));
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.ToString());
+                }
+            }
+        }
+
+        private void updateClientRequests()
+        {
+
+            foreach (KeyValuePair<IPEndPoint, byte[]> m in _inComing)
+            {
+                int userIndex = _users.FindIndex(u => u.location.Equals(m.Key));
+                JObject com = Transmition.Parse(m.Value);
+                User sender = _users[userIndex];
+                string comType = com[Transmition.Base.TYPE].Value<string>();
+
+                if (comType != Transmition.TransmitionTypes.LOGIN)
+                {
+                    sender.lastMessage = com[Transmition.Base.TIME_STAMP].Value<long>();
+                }
+
+                if (sender.id == -1 &&
+                    comType != Transmition.TransmitionTypes.LOGIN &&
+                    comType != Transmition.TransmitionTypes.LOGOUT &&
+                    comType != Transmition.TransmitionTypes.PING)
+                {
+
+                    string message = string.Format("{0} | sent the command: {2} without first logging in", m.Key, comType);
+                    Logger.Log(Logger.LogLevel.normal, Logger.Type.ERROR, message);
+                    JObject errorMessage = Transmition.Error.Create("LoginError", 1, message);
+                    _outGoing.Add(new OutGoing(sender.location, errorMessage));
+                    logout(sender);
+                    continue;
+
+                }
+
+                switch (comType)
+                {
+                    case Transmition.TransmitionTypes.PING:
+                        ping(sender);
+                        break;
+
+                    case Transmition.TransmitionTypes.LOGIN:
+                        login(sender, com);
+                        break;
+
+                    case Transmition.TransmitionTypes.LOGOUT:
+                        logout(sender);
+                        break;
+
+                    case Transmition.TransmitionTypes.MOVE:
+                        move(sender, com);
+                        break;
+
+                        /*case ComType.Chat:
+                            //userChat(sender, (Chat)com);
+                            break;
+
+                        case ComType.Inventory:
+                            //userInventory(sender, (Data.Inventory)com);
+                            break;
+
+                        case ComType.Interact:
+                            //userInteract(sender, (Interact)com);
+                            break;
+                        */
+                }
+            }
+            _inComing.Clear();
+        }
+
+        private void login(User sender, JObject com)
+        {
+            int id;
+            string username = com[Transmition.Login.USERNAME].Value<string>();
+
+
+            // if the player is currently send an error and stop the login process
+            if (sender.id != -1)
+            {
+                string name = _game.Players.getPlayerById(sender.id).name;
+
+                Logger.Log(Logger.LogLevel.normal, Logger.Type.ERROR, string.Format("Multiple login attemps {0} | {1}", sender.location, name));
+                JObject error = Transmition.Error.Create("CurrentlyActive", 345, string.Format("This user is currently active as: {0}", name));
+                _outGoing.Add(new OutGoing(sender.location, error));
+                return;
+            }
+
+            if ((id = _game.Players.addPlayer(username)) != -1)
+            {
+                // update user
+                int sendersUserIndex = _users.FindIndex(u => u.location == sender.location);
+                sender.id = id;
+                _users[sendersUserIndex] = sender;
+                Logger.Log(Logger.LogLevel.normal, Logger.Type.CONNECTED, string.Format("{0} | {1}", sender.location, username));
+
+                // let the user know they are logged in
+                com[Transmition.Base.ID] = id;
+                _outGoing.Add(new OutGoing(sender.location, com));
+
+                // send to everyone accept the user logging in
+                List<User> subUsers = _users.FindAll(u => u.id != id);
+                if (subUsers.Count > 0)
+                {
+                    JObject response = Transmition.Login.Create(id, _game.Players.getPlayerById(id).name);
+                    _outGoing.Add(new OutGoing(subUsers, com));
+                }
+
+            }
+            else
+            {
+                JObject error = Transmition.Error.Create("NameInUse", 344, string.Format("The name '{0}' is currently in use. Please use a different name to login", username));
+                _outGoing.Add(new OutGoing(sender.location, error));
+
+                Logger.Log(Logger.LogLevel.normal, Logger.Type.ERROR, string.Format("The name '{0}' is already in use", username));
+            }
+        }
+
+        private void logout(User sender)
+        {
+            _toRemove.Add(sender);
+        }
+
+        private void ping(User sender)
+        {
+            if (sender.id != -1)
+            {
+                JObject ping = Transmition.Ping.Create(sender.id);
+                Logger.Log(Logger.LogLevel.debug, Logger.Type.PING, string.Format("{0} | {1}", sender.location, ping[Transmition.Base.TIME_STAMP]));
+                _outGoing.Add(new OutGoing(sender.location, ping));
+            }
+        }
+
+        private void move(User sender, JObject com)
+        {
+            int direction = com[Transmition.Move.DIRECTION].Value<int>();
+            bool isComplete = com[Transmition.Move.COMPLETE].Value<bool>();
+
+            _game.Players.getPlayerById(sender.id).setMove(direction, isComplete);
+
+            Player p = _game.Players.getPlayerById(sender.id);
+            Logger.Log(Logger.LogLevel.normal, Logger.Type.MOVE, string.Format("{0}\tLocation: {1:F2}:{2:F2}", ((!isComplete) ? "START" : "FINISH"), p.x, p.y));
+            _outGoing.Add(new OutGoing(_users, Transmition.Move.Create(sender.id, direction, isComplete, p.x, p.y)));
+        }
+
+        /*private void userChat(User sender, Chat com) {
 			if (com.chatType == ChatType.Global) {
 				_outGoing.Add(new OutGoing(_users, com));
 
@@ -264,17 +366,6 @@ namespace GameServer {
 			_outGoing.Add(new OutGoing(sender.location, com));
 		}
 
-		private void userMove(User sender, Move com) {
-			_game.Players.setPlayerMove(com.id, com.direction, com.isComplete);
-
-			Player p = _game.Players.getPlayerById(sender.id);
-			_outGoing.Add(new OutGoing(_users, new Move(com.id, com.direction, com.isComplete, p.x, p.y)));
-		}
-
-		private void userPing(User sender, Ping com) {
-			_outGoing.Add(new OutGoing(sender.location, com));
-		}
-
 		private void userInteract(User sender, Interact com) {
 			Player p = _game.Players.getPlayerById(sender.id);
 
@@ -288,20 +379,21 @@ namespace GameServer {
 
 			com.Player = p;
 			_outGoing.Add(new OutGoing(sender.location, com));
-		}
+		}*/
 
-		private void sendDataToClients() {
-			foreach (OutGoing message in _outGoing) {
-				//if (message.data.type != ComType.Ping)
-					//Console.WriteLine(message.data.ToString());
-				byte[] data = message.data.toByteArray();
-				_server.broadcast(message.clients, data);
-			}
-			_outGoing.Clear();
-		}
+        private void sendDataToClients()
+        {
+            foreach (OutGoing message in _outGoing)
+            {
+                byte[] data = Transmition.Serialize(message.data);
+                _server.broadcast(message.clients, data);
+            }
+            _outGoing.Clear();
+        }
 
-		static void Main(string[] args) {
-			GameServer g = new GameServer();
-		}
-	}
+        static void Main(string[] args)
+        {
+            GameServer g = new GameServer();
+        }
+    }
 }

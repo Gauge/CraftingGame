@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace GameServer.Data {
-	public class Settings {
+	public static class Helper {
 		private static long lastTime = -1;
 		private static long currentTime = 0;
 		private static long delta = 0;
@@ -28,6 +28,10 @@ namespace GameServer.Data {
 
 		public static long getTimestamp() {
 			return DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+		}
+
+        public static string getFormatedTimestamp() {
+            return DateTime.Now.ToString("MM/dd/yy HH:mm:ss:fff");
         }
 	}
 }
