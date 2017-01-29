@@ -4,8 +4,6 @@ using System.Net;
 using GameServer.Networking;
 using GameServer.Data;
 using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
-using GameServer.Data.Errors;
 using GameServer.Data.Interactables;
 
 namespace GameServer
@@ -130,7 +128,7 @@ namespace GameServer
                 string username = "";
                 if (user.id != -1)
                 {
-                    username = _game.Players.getPlayerById(user.id).name;
+                    username = _game.Players.getPlayerById(user.id).Name;
                     _game.Players.removePlayer(user.id);
                     _outGoing.Add(new OutGoing(_users, Transmition.Logout.Create(user.id)));
 
@@ -151,9 +149,10 @@ namespace GameServer
 
             foreach (KeyValuePair<IPEndPoint, byte[]> m in messages)
             {
-                try
+                string errorMessage;
+                JObject com = Transmition.Parse(m.Value, out errorMessage);
+                if (com != null)
                 {
-                    JObject com = Transmition.Parse(m.Value);
                     // add new users
                     User temp = new User(-1, m.Key, Helper.getTimestamp());
                     if (!_users.Exists(u => u.location.Equals(temp.location)))
@@ -161,25 +160,12 @@ namespace GameServer
                         _users.Add(temp);
                     }
                     _inComing.Add(m.Key, m.Value);
-
                 }
-                catch (JsonReaderException e)
+                else
                 {
-                    JObject error = Transmition.Error.Create("InvalidTransmition", 900, "The received transmition was unable to be parsed");
+                    Logger.Log(Logger.LogLevel.normal, Logger.Type.ERROR, string.Format("TransmisionError: {0}", errorMessage));
+                    JObject error = Transmition.Error.Create("TransmisionError", 605, errorMessage);
                     _outGoing.Add(new OutGoing(m.Key, error));
-
-                    Logger.Log(Logger.LogLevel.debug, Logger.Type.ERROR, string.Format("InvalidTransmition\tFrom: {0}", m.Key));
-                }
-                catch (TransmitionValidationException e)
-                {
-                    JObject error = Transmition.Error.Create("TransmitionValidationException", 901, e.Message);
-                    _outGoing.Add(new OutGoing(m.Key, error));
-
-                    Logger.Log(Logger.LogLevel.debug, Logger.Type.ERROR, string.Format("TransmitionValidationException\t From: {0}", m.Key));
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.ToString());
                 }
             }
         }
@@ -190,60 +176,68 @@ namespace GameServer
             foreach (KeyValuePair<IPEndPoint, byte[]> m in _inComing)
             {
                 int userIndex = _users.FindIndex(u => u.location.Equals(m.Key));
-                JObject com = Transmition.Parse(m.Value);
-                User sender = _users[userIndex];
-                string comType = com[Transmition.Base.TYPE].Value<string>();
-
-                if (comType != Transmition.TransmitionTypes.LOGIN)
+                string emessage;
+                JObject com = Transmition.Parse(m.Value, out emessage);
+                if (com != null)
                 {
-                    sender.lastMessage = com[Transmition.Base.TIME_STAMP].Value<long>();
-                }
+                    User sender = _users[userIndex];
+                    string comType = com[Transmition.Base.TYPE].Value<string>();
 
-                if (sender.id == -1 &&
-                    comType != Transmition.TransmitionTypes.LOGIN &&
-                    comType != Transmition.TransmitionTypes.LOGOUT &&
-                    comType != Transmition.TransmitionTypes.PING)
-                {
+                    if (comType != Transmition.TransmitionTypes.LOGIN)
+                    {
+                        sender.lastMessage = com[Transmition.Base.TIME_STAMP].Value<long>();
+                    }
 
-                    string message = string.Format("{0} | sent the command: {2} without first logging in", m.Key, comType);
-                    Logger.Log(Logger.LogLevel.normal, Logger.Type.ERROR, message);
-                    JObject errorMessage = Transmition.Error.Create("LoginError", 1, message);
-                    _outGoing.Add(new OutGoing(sender.location, errorMessage));
-                    logout(sender);
-                    continue;
+                    if (sender.id == -1 &&
+                        comType != Transmition.TransmitionTypes.LOGIN &&
+                        comType != Transmition.TransmitionTypes.LOGOUT &&
+                        comType != Transmition.TransmitionTypes.PING)
+                    {
 
-                }
-
-                switch (comType)
-                {
-                    case Transmition.TransmitionTypes.PING:
-                        ping(sender);
-                        break;
-
-                    case Transmition.TransmitionTypes.LOGIN:
-                        login(sender, com);
-                        break;
-
-                    case Transmition.TransmitionTypes.LOGOUT:
+                        string message = string.Format("{0} | sent the command: {1} without first logging in", sender.location, comType);
+                        Logger.Log(Logger.LogLevel.normal, Logger.Type.ERROR, message);
+                        JObject errorMessage = Transmition.Error.Create("LoginError", 1, message);
+                        _outGoing.Add(new OutGoing(sender.location, errorMessage));
                         logout(sender);
-                        break;
+                        continue;
 
-                    case Transmition.TransmitionTypes.MOVE:
-                        move(sender, com);
-                        break;
+                    }
 
-                        /*case ComType.Chat:
-                            //userChat(sender, (Chat)com);
+                    switch (comType)
+                    {
+                        case Transmition.TransmitionTypes.PING:
+                            ping(sender);
                             break;
 
-                        case ComType.Inventory:
-                            //userInventory(sender, (Data.Inventory)com);
+                        case Transmition.TransmitionTypes.LOGIN:
+                            login(sender, com);
                             break;
 
-                        case ComType.Interact:
-                            //userInteract(sender, (Interact)com);
+                        case Transmition.TransmitionTypes.LOGOUT:
+                            logout(sender);
                             break;
-                        */
+
+                        case Transmition.TransmitionTypes.MOVE:
+                            move(sender, com);
+                            break;
+
+                        case Transmition.TransmitionTypes.PLACE_TURRET:
+                            place_turret(sender, com);
+                            break;
+
+                            /*case ComType.Chat:
+                                //userChat(sender, (Chat)com);
+                                break;
+
+                            case ComType.Inventory:
+                                //userInventory(sender, (Data.Inventory)com);
+                                break;
+
+                            case ComType.Interact:
+                                //userInteract(sender, (Interact)com);
+                                break;
+                            */
+                    }
                 }
             }
             _inComing.Clear();
@@ -258,7 +252,7 @@ namespace GameServer
             // if the player is currently send an error and stop the login process
             if (sender.id != -1)
             {
-                string name = _game.Players.getPlayerById(sender.id).name;
+                string name = _game.Players.getPlayerById(sender.id).Name;
 
                 Logger.Log(Logger.LogLevel.normal, Logger.Type.ERROR, string.Format("Multiple login attemps {0} | {1}", sender.location, name));
                 JObject error = Transmition.Error.Create("CurrentlyActive", 345, string.Format("This user is currently active as: {0}", name));
@@ -282,7 +276,7 @@ namespace GameServer
                 List<User> subUsers = _users.FindAll(u => u.id != id);
                 if (subUsers.Count > 0)
                 {
-                    JObject response = Transmition.Login.Create(id, _game.Players.getPlayerById(id).name);
+                    JObject response = Transmition.Login.Create(id, _game.Players.getPlayerById(id).Name);
                     _outGoing.Add(new OutGoing(subUsers, com));
                 }
 
@@ -306,7 +300,7 @@ namespace GameServer
             if (sender.id != -1)
             {
                 JObject ping = Transmition.Ping.Create(sender.id);
-                Logger.Log(Logger.LogLevel.debug, Logger.Type.PING, string.Format("{0} | {1}", sender.location, ping[Transmition.Base.TIME_STAMP]));
+                Logger.Log(Logger.LogLevel.debug, Logger.Type.PING, string.Format("{0} | {1}", _game.Players.getPlayerById(sender.id).Name, ping[Transmition.Base.TIME_STAMP]));
                 _outGoing.Add(new OutGoing(sender.location, ping));
             }
         }
@@ -319,8 +313,27 @@ namespace GameServer
             _game.Players.getPlayerById(sender.id).setMove(direction, isComplete);
 
             Player p = _game.Players.getPlayerById(sender.id);
-            Logger.Log(Logger.LogLevel.normal, Logger.Type.MOVE, string.Format("{0}\tLocation: {1:F2}:{2:F2}", ((!isComplete) ? "START" : "FINISH"), p.x, p.y));
-            _outGoing.Add(new OutGoing(_users, Transmition.Move.Create(sender.id, direction, isComplete, p.x, p.y)));
+            Logger.Log(Logger.LogLevel.normal, Logger.Type.GAME_ACTION, string.Format("{0}\tMove: {1:F2}:{2:F2}", ((!isComplete) ? "START" : "FINISH"), p.X, p.Y));
+            _outGoing.Add(new OutGoing(_users, Transmition.Move.Create(sender.id, direction, isComplete, p.X, p.Y)));
+        }
+
+        private void place_turret(User sender, JObject com)
+        {
+            int x = com[Transmition.PlaceTurret.X].Value<int>();
+            int y = com[Transmition.PlaceTurret.Y].Value<int>();
+
+            string errorMessage;
+            if (_game.placeTurret(sender.id, x, y, out errorMessage))
+            {
+                Logger.Log(Logger.LogLevel.normal, Logger.Type.GAME_ACTION, string.Format("Place Turret: {0:F2}:{1:F2}", x, y));
+                com[Transmition.Base.ID] = sender.id;
+                _outGoing.Add(new OutGoing(_users, com));
+            }
+            else
+            {
+                Logger.Log(Logger.LogLevel.normal, Logger.Type.ERROR, string.Format("PlaceTurretException: {0}", errorMessage));
+                _outGoing.Add(new OutGoing(sender.location, Transmition.Error.Create("PlaceTurretException", 2435, errorMessage)));
+            }
         }
 
         /*private void userChat(User sender, Chat com) {

@@ -3,21 +3,25 @@ using System.Collections.Generic;
 
 namespace GameServer.Data.Interactables
 {
-    public class Pawn : GameObject
+    public abstract class Pawn : GameObject
     {
         public const int UP = 0;
         public const int DOWN = 1;
         public const int LEFT = 2;
         public const int RIGHT = 3;
+        public const int SPEED_PER_UNIT = 100;
 
-        public const int movementSpeed = 750; // this is temp till i get other matter settled with
-        public const int speedPerUnit = 100;
-        public List<bool> Moves { get; private set; }
+        public List<bool> Moves { get; protected set; }
+        public StatSheet Stats { get; protected set; }
 
 
         public Pawn(int id, string name, double x, double y) : base(id, name, x, y)
         {
             Moves = new List<bool> { false, false, false, false };
+            Stats = new StatSheet();
+            Stats.Heath = 100;
+            Stats.Damage = 0;
+            Stats.MoveSpeed = 750;
         }
 
         public bool setMove(int d, bool isComplete)
@@ -37,29 +41,29 @@ namespace GameServer.Data.Interactables
             return false;
         }
 
-        public virtual void update()
+        public override void update(Game game)
         {
             double delta = Helper.getDelta();
-            double amountToMove = (((movementSpeed / speedPerUnit) * delta) / 1000);
+            double amountToMove = (((Stats.MoveSpeed / SPEED_PER_UNIT) * delta) / 1000);
 
             if (Moves[UP])
             {
-                y -= amountToMove;
+                Y -= amountToMove;
             }
 
             if (Moves[DOWN])
             {
-                y += amountToMove;
+                Y += amountToMove;
             }
 
             if (Moves[LEFT])
             {
-                x -= amountToMove;
+                X -= amountToMove;
             }
 
             if (Moves[RIGHT])
             {
-                x += amountToMove;
+                X += amountToMove;
             }
         }
     }

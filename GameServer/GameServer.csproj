@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>GameServer</RootNamespace>
     <AssemblyName>GameServer</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -51,18 +51,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Data\Utility\Errors\InventoryArgumentException.cs" />
-    <Compile Include="Data\Utility\Errors\InventoryCombinationException.cs" />
-    <Compile Include="Data\Utility\Errors\ItemErrors.cs" />
-    <Compile Include="Data\Utility\Errors\ItemIsStackableException.cs" />
-    <Compile Include="Data\Utility\Errors\ItemOperationException.cs" />
-    <Compile Include="Data\Utility\Errors\MiniGameItemAddError.cs" />
-    <Compile Include="Data\Utility\Errors\TransmitionValidationException.cs" />
-    <Compile Include="Data\Interactables\IInventory.cs" />
-    <Compile Include="Data\Interactables\LGameObject.cs" />
-    <Compile Include="Data\Interactables\Inventory.cs" />
+    <Compile Include="Data\Interactables\Enemies\Barbarian.cs" />
+    <Compile Include="Data\Interactables\Enemies\Enemy.cs" />
+    <Compile Include="Data\Interactables\Tower\Turrets.cs" />
+    <Compile Include="Data\Interactables\Tower\Turret.cs" />
+    <Compile Include="Data\Threats.cs" />
+    <Compile Include="Data\MapData\Map.cs" />
+    <Compile Include="Data\Interactables\GameObjects.cs" />
     <Compile Include="Data\Interactables\Pawn.cs" />
-    <Compile Include="Data\Interactables\LPlayer.cs" />
+    <Compile Include="Data\Interactables\Players.cs" />
+    <Compile Include="Data\StatSheet.cs" />
+    <Compile Include="Data\Threat.cs" />
     <Compile Include="Data\Utility\Helper.cs" />
     <Compile Include="Data\Utility\Logger.cs" />
     <Compile Include="Data\Utility\Transmition.cs" />

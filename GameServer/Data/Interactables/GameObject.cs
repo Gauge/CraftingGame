@@ -4,38 +4,59 @@ namespace GameServer.Data.Interactables
 {
 
 
-    public class GameObject
+    public abstract class GameObject
     {
-        public int id { get; }
-        public string name { get; }
-        public double x { get; set; }
-        public double y { get; set; }
-        public double z { get; set; }
-        public double actionRadious { get; }
+        public int ObjectID { get; }
+        public int CreationID { get; }
+        public string Name { get; }
+        public double X { get; set; }
+        public double Y { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public double ActionRadious { get; }
 
-        public GameObject(int id, string name, double x, double y, double actionRadious = 5)
+        public GameObject(int id, string name, double x, double y, double actionRadious = 3)
         {
-            this.id = id;
-            this.name = name;
-            this.x = x;
-            this.y = y;
+            CreationID = Helper.generateCreationID();
+            ObjectID = id;
+            Name = name;
+            X = x;
+            Y = y;
+            Width = 1;
+            Height = 1;
 
-            this.actionRadious = actionRadious;
+            this.ActionRadious = actionRadious;
         }
 
-        public virtual void interact() { }
-        public virtual void update() { }
-
-        public bool isInRange(Player p)
+        public GameObject(int id, string name, double x, double y, int width, int height, double actionRadious = 3)
         {
-            return isInRange(p.x, p.y);
+            this.ObjectID = id;
+            this.Name = name;
+            this.X = x;
+            this.Y = y;
+            this.Width = width;
+            this.Height = height;
+
+            this.ActionRadious = actionRadious;
         }
 
-        public bool isInRange(double x, double y)
+        //public abstract void interact();
+        public abstract void update(Game game);
+
+        public bool isInActionRange(Player p)
+        {
+            return isInActionRange(p.X, p.Y);
+        }
+
+        public bool isInActionRange(double a, double b)
+        {
+            return isInRadious(a, b, ActionRadious);
+        }
+
+        public bool isInRadious(double a, double b, double r)
         {
             // Pythagoras
-            return Math.Pow((x - this.x), 2) + Math.Pow((y - this.y), 2) < actionRadious;
-
+            return Math.Pow((X - (Width / 2) - a), 2) + Math.Pow((Y + (Height / 2) - b), 2) < (Math.Pow(r, 2) + ((Width + Height) / 4));
         }
     }
 }

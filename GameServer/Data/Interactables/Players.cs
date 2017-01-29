@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace GameServer.Data.Interactables
 {
-    public class LPlayer : List<Player>
+    public class Players : List<Player>
     {
 
         private List<int> _playersToRemove;
@@ -30,7 +30,7 @@ namespace GameServer.Data.Interactables
             // after the first time though looks for free id's
             while (_currentID <= _maxID)
             {
-                if (this.Find(p => p.id == _currentID) == null)
+                if (this.Find(p => p.PlayerID == _currentID) == null)
                 {
                     return _currentID;
                 }
@@ -40,16 +40,17 @@ namespace GameServer.Data.Interactables
             return generatePlayerID();
         }
 
-        public LPlayer()
+        public Players()
         {
             _playersToRemove = new List<int>();
         }
 
-        private void removePlayers()
+        private void removePlayers(Game game)
         {
             foreach (int id in _playersToRemove)
             {
-                this.RemoveAll(p => p.id == id);
+                game.Turrets.removeTurretByPlayerID(id);
+                this.RemoveAll(p => p.PlayerID == id);
             }
             _playersToRemove.Clear();
         }
@@ -61,10 +62,10 @@ namespace GameServer.Data.Interactables
 
         public int addPlayer(Player p)
         {
-            if (this.Find(plr => plr.name == p.name || plr.id == p.id) == null)
+            if (this.Find(plr => plr.Name == p.Name || plr.PlayerID == p.PlayerID) == null)
             {
                 this.Add(p);
-                return getIdByUsername(p.name);
+                return getIdByUsername(p.Name);
             }
             return -1;
         }
@@ -86,55 +87,34 @@ namespace GameServer.Data.Interactables
 
         public Player getPlayerById(int id)
         {
-            return this.Find(u => u.id == id);
+            return this.Find(u => u.PlayerID == id);
         }
 
         public Player getPlayerByUsername(string username)
         {
-            return this.Find(p => p.name == username);
+            return this.Find(p => p.Name == username);
         }
 
         public int getIdByUsername(string username)
         {
-            Player plr = this.Find(p => p.name == username);
+            Player plr = this.Find(p => p.Name == username);
             if (plr != null)
-                return plr.id;
+                return plr.PlayerID;
             return -1;
         }
 
         public void setPlayer(Player player)
         {
-            this[this.FindIndex(u => u.id == player.id)] = player;
+            this[this.FindIndex(u => u.PlayerID == player.PlayerID)] = player;
         }
 
-        public void update()
+        public void update(Game game)
         {
-            removePlayers();
+            removePlayers(game);
             foreach (Player p in this)
             {
-                p.update();
+                p.update(game);
             }
         }
-
-        /*
-		public bool setPlayerMove(int id, Direction direction, bool isComplete) {
-			Player player = getPlayerById(id);
-			if (player != null) {
-				return player.setMove(direction, isComplete);
-			}
-			return false;
-		}
-
-		public bool setPlayerLocation(int id, double x, double y) {
-			Player p = getPlayerById(id);
-			if (p != null) {
-				p.x = x;
-				p.y = y;
-				return true;
-			}
-			return false;
-		}
-		*/
-
     }
 }

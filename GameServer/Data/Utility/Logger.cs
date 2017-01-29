@@ -9,7 +9,7 @@ namespace GameServer.Data
     public static class Logger
     {
         public enum LogLevel { normal, debug }
-        public enum Type {INTERNAL, CONNECTED, DISCONNECTED, ERROR, LOGIN, LOGOUT, PING, MOVE }
+        public enum Type {INTERNAL, CONNECTED, DISCONNECTED, ERROR, LOGIN, LOGOUT, PING, GAME_ACTION }
 
         public static LogLevel Log_Level = LogLevel.debug;
 
