@@ -8,9 +8,7 @@ namespace GameFrontEndDebugger {
 		/// </summary>
 		[STAThread]
 		static void Main() {
-			Application.EnableVisualStyles();
-			Application.SetCompatibleTextRenderingDefault(false);
-			Application.Run(new GameForm());
+            Application.Run(new Display());
 		}
 	}
 }

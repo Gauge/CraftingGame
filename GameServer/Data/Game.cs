@@ -3,24 +3,27 @@ using System.Collections.Generic;
 using GameServer.Data.Interactables;
 using GameServer.Data.MapData;
 using GameServer.Data.Interactables.Tower;
+using GameServer.Data.Interactables.Enemies;
 
 namespace GameServer.Data
 {
     public class Game
     {
         public Players Players { get; private set; }
-        public GameObjects GameObjects { get; private set; }
+        public GameObjects Enemies { get; private set; }
         public Turrets Turrets { get; private set; }
         public Map Map { get; private set; }
+        public List<Action> Actions { get; private set; }
 
 
         public Game()
         {
+            Actions = new List<Action>();
             Players = new Players();
-            GameObjects = new GameObjects();
+            Enemies = new GameObjects();
             Turrets = new Turrets();
             Map = new Map();
-            GameObjects.AddRange(Map.seedBarbarians());
+            Enemies.AddRange(Map.seedBarbarians());
         }
 
         public bool placeTurret(int playerID, int x, int y, out string errorMessage)
@@ -30,11 +33,12 @@ namespace GameServer.Data
             if (Turrets.getTurretByPlayerID(playerID) == null)
             {
                 Turret t = new Turret(playerID, x, y);
-                if (Map.verifyPlacement(t) && GameObjects.getGameObjectsOverlapping(t.X, t.Y, t.Width, t.Height).Count == 0)
+                if (Map.verifyPlacement(t) && Enemies.getGameObjectsOverlapping(t.X, t.Y, t.Width, t.Height).Count == 0)
                 {
                     if (!Turrets.isInNoBuildZone(t.X, t.Y))
                     {
                         Turrets.Add(t);
+                        Actions.Add(new Action(t, Action.ActionType.MOVE_STATE_CHANGED));
                         return true;
                     }
                     else
@@ -54,30 +58,11 @@ namespace GameServer.Data
             return false;
         }
 
-        public List<GameObject> getPlayerGameState(int playerID)
-        {
-            List<GameObject> result = new List<GameObject>();
-            Player player = Players.getPlayerById(playerID);
-            Turret turret = Turrets.getTurretByPlayerID(playerID);
-
-            // vision for player
-            result.AddRange(Players.FindAll(p => p.isInRadious(player.X, player.Y, Player.VISION_RADIOUS)));
-            result.AddRange(GameObjects.FindAll(o => o.isInRadious(player.X, player.Y, Player.VISION_RADIOUS)));
-            result.AddRange(Turrets.FindAll(t => t.isInRadious(player.X, player.Y, Player.VISION_RADIOUS)));
-
-            // vision for player turret
-            result.AddRange(Players.FindAll(p => p.isInRadious(turret.X, turret.Y, Turret.VISION_RADIOUS)));
-            result.AddRange(GameObjects.FindAll(o => o.isInRadious(turret.X, turret.Y, Turret.VISION_RADIOUS)));
-            result.AddRange(Turrets.FindAll(t => t.isInRadious(turret.X, turret.Y, Turret.VISION_RADIOUS)));
-
-            return result;
-        }
-
         public void update()
         {
             Players.update(this);
             Turrets.update(this);
-            GameObjects.update(this);
+            Enemies.update(this);
         }
 
         public override string ToString()
@@ -91,7 +76,7 @@ namespace GameServer.Data
             }
 
             output += "\nGameObjects:\n";
-            foreach (GameObject gO in GameObjects)
+            foreach (GameObject gO in Enemies)
             {
                 output += gO.ToString() + "\n";
             }

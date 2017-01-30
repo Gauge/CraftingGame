@@ -13,58 +13,60 @@ namespace GameServer.Data
             public const string TYPE = "type";
             public const string TIME_STAMP = "timestamp";
 
-            public static bool Validate(JObject obj, out string errorMessage)
+            public static string IncomingValidate(JObject obj)
             {
-                errorMessage = "";
-                int temp;
-                long temp2;
+                JToken type = obj[TYPE];
+
+                if (type == null)
+                {
+                    return "Missing required field: type";
+                }
+
+                if (type.Type != JTokenType.String)
+                {
+                    return "type field is not a string: " + type.Type + " Value:" + type;
+                }
+
+                if (!TransmitionTypes.isTransmitionType(type.ToString()))
+                {
+                    return "Invalid transmition type Expected: login Actual: " + type;
+                }
+
+                return "";
+            }
+
+            public static string OutGoingValidate(JObject obj)
+            {
                 JToken id = obj[ID];
                 JToken type = obj[TYPE];
                 JToken timestamp = obj[TIME_STAMP];
 
                 if (id == null)
                 {
-                    errorMessage = "Missing required field: id";
-                    return false;
+                    return "Missing required field: id";
                 }
 
-                if (!int.TryParse((string)id, out temp))
+                if (id.Type != JTokenType.Integer)
                 {
-                    errorMessage = "Id field is not an integer value. Was instead: " + id.Type + " Value: " + id;
-                    return false;
+                    return "id field is not an integer value. Was instead: " + id.Type + " Value: " + id;
                 }
 
-                if (type == null)
+                if (id.Value<int>() < 0)
                 {
-                    errorMessage = "Missing required field: type";
-                    return false;
-                }
-
-                if (!TransmitionTypes.isTransmitionType(type.ToString()))
-                {
-                    errorMessage = "Invalid transmition type Expected: login Actual: " + type;
-                    return false;
-                }
-
-                if (type.Type != JTokenType.String)
-                {
-                    errorMessage = "type field is not a string: " + id.Type + " Value:" + id;
-                    return false;
+                    return "id field must be larger than 0. Currently is: " + id.Value<int>();
                 }
 
                 if (timestamp == null)
                 {
-                    errorMessage = "Missing required field: timestamp";
-                    return false;
+                    return "Missing required field: timestamp";
                 }
 
-                if (!long.TryParse((string)timestamp, out temp2))
+                if (timestamp.Type != JTokenType.Integer)
                 {
-                    errorMessage = "timestamp field is not an long time format value. Was instead: " + timestamp.Type + " Value: " + timestamp;
-                    return false;
+                    return "timestamp field is not an integer value. Was instead: " + timestamp.Type + " Value: " + timestamp;
                 }
 
-                return true;
+                return IncomingValidate(obj);
             }
         }
 
@@ -89,12 +91,13 @@ namespace GameServer.Data
                 {
                     return obj;
                 }
-                else {
+                else
+                {
                     throw new Exception(errorMessage);
                 }
             }
 
-            public static bool Validate(JObject obj,  out string errorMessage)
+            public static bool Validate(JObject obj, out string errorMessage)
             {
                 errorMessage = "";
                 return true;
@@ -105,7 +108,6 @@ namespace GameServer.Data
         internal static class Login
         {
             public const string USERNAME = "username";
-            //public const string PASSWORD = "password";
 
             public static JObject Create(int id, string username)
             {
@@ -115,8 +117,8 @@ namespace GameServer.Data
                 obj.Add(USERNAME, username);
                 obj.Add(Base.TIME_STAMP, Helper.getTimestamp());
 
-                string errorMessage;
-                if (Validate(obj, out errorMessage))
+                string errorMessage = OutGoingValidate(obj);
+                if (errorMessage == "")
                 {
                     return obj;
                 }
@@ -126,25 +128,30 @@ namespace GameServer.Data
                 }
             }
 
-            public static bool Validate(JObject obj, out string errorMessage)
+            public static string IncomingValidate(JObject obj)
             {
-                errorMessage = "";
                 JToken username = obj[USERNAME];
-                //JToken password = obj[PASSWORD];
 
                 if (username == null)
                 {
-                    errorMessage = "Missing required field: 'username'";
-                    return false;
+                    return "Missing required field: 'username'";
                 }
 
                 if (username.Type != JTokenType.String)
                 {
-                    errorMessage ="username field is not a string: " + username.Type + " Value:" + username;
-                    return false;
+                    return "username field is not a string: " + username.Type + " Value:" + username;
                 }
 
-                return true;
+                return "";
+            }
+
+            public static string OutGoingValidate(JObject obj)
+            {
+                if (IncomingValidate(obj) != "")
+                {
+                    return IncomingValidate(obj);
+                }
+                return Base.OutGoingValidate(obj);
             }
         }
 
@@ -157,8 +164,8 @@ namespace GameServer.Data
                 obj.Add(Base.ID, id);
                 obj.Add(Base.TIME_STAMP, Helper.getTimestamp());
 
-                string errorMessage;
-                if (Validate(obj, out errorMessage))
+                string errorMessage = OutGoingValidate(obj);
+                if (errorMessage == "")
                 {
                     return obj;
                 }
@@ -168,10 +175,14 @@ namespace GameServer.Data
                 }
             }
 
-            public static bool Validate(JObject obj, out string errorMessage)
+            public static string IncomingValidate(JObject obj)
             {
-                errorMessage = "";
-                return true;
+                return "";
+            }
+
+            public static string OutGoingValidate(JObject obj)
+            {
+                return Base.OutGoingValidate(obj);
             }
         }
 
@@ -184,8 +195,8 @@ namespace GameServer.Data
                 obj.Add(Base.ID, id);
                 obj.Add(Base.TIME_STAMP, Helper.getTimestamp());
 
-                string errorMessage;
-                if (Validate(obj, out errorMessage))
+                string errorMessage = OutGoingValidate(obj);
+                if (errorMessage == "")
                 {
                     return obj;
                 }
@@ -195,10 +206,14 @@ namespace GameServer.Data
                 }
             }
 
-            public static bool Validate(JObject obj, out string errorMessage)
+            public static string IncomingValidate(JObject obj)
             {
-                errorMessage = "";
-                return true;
+                return "";
+            }
+
+            public static string OutGoingValidate(JObject obj)
+            {
+                return Base.OutGoingValidate(obj);
             }
         }
 
@@ -220,8 +235,8 @@ namespace GameServer.Data
                 obj.Add(Y, y);
                 obj.Add(Base.TIME_STAMP, Helper.getTimestamp());
 
-                string errorMessage;
-                if (Validate(obj, out errorMessage))
+                string errorMessage = OutGoingValidate(obj);
+                if (errorMessage == "")
                 {
                     return obj;
                 }
@@ -231,9 +246,8 @@ namespace GameServer.Data
                 }
             }
 
-            public static bool Validate(JObject obj, out string errorMessage)
+            public static string IncomingValidate(JObject obj)
             {
-                errorMessage = "";
                 JToken direction = obj[DIRECTION];
                 JToken complete = obj[COMPLETE];
                 JToken x = obj[X];
@@ -241,40 +255,34 @@ namespace GameServer.Data
 
                 if (direction == null)
                 {
-                    errorMessage ="Missing required field: 'direction'";
-                    return false;
+                    return "Missing required field: 'direction'";
                 }
 
                 if (direction.Type != JTokenType.Integer)
                 {
-                    errorMessage ="direction field is not an integer: " + direction.Type + " Value:" + direction;
-                    return false;
+                    return "direction field is not an integer: " + direction.Type + " Value:" + direction;
                 }
 
                 if (!(direction.Value<int>() >= 0 && direction.Value<int>() <= 3))
                 {
-                    errorMessage ="The direction value must be one of the following 0:Up, 1:Down, 2:Left, 3:Right";
-                    return false;
+                    return "The direction value must be one of the following 0:Up, 1:Down, 2:Left, 3:Right";
                 }
 
                 if (complete == null)
                 {
-                    errorMessage ="Missing required field: 'complete'";
-                    return false;
+                    return "Missing required field: 'complete'";
                 }
 
                 if (complete.Type != JTokenType.Boolean)
                 {
-                    errorMessage ="complete field is not an boolean: " + complete.Type + " Value:" + complete;
-                    return false;
+                    return "complete field is not an boolean: " + complete.Type + " Value:" + complete;
                 }
 
                 if (x != null)
                 {
                     if (x.Type != JTokenType.Float)
                     {
-                        errorMessage ="x field is not an float: " + x.Type + " Value:" + x;
-                        return false;
+                        return "x field is not an float: " + x.Type + " Value:" + x;
                     }
                 }
 
@@ -282,16 +290,24 @@ namespace GameServer.Data
                 {
                     if (y.Type != JTokenType.Float)
                     {
-                        errorMessage ="y field is not an float: " + y.Type + " Value:" + y;
-                        return false;
+                        return "y field is not an float: " + y.Type + " Value:" + y;
                     }
                 }
+                return "";
+            }
 
-                return true;
+            public static string OutGoingValidate(JObject obj)
+            {
+                if (IncomingValidate(obj) != "")
+                {
+                    return IncomingValidate(obj);
+                }
+                return Base.OutGoingValidate(obj);
             }
         }
 
-        internal static class PlaceTurret {
+        internal static class PlaceTurret
+        {
             public static string X = "x";
             public static string Y = "y";
 
@@ -304,8 +320,8 @@ namespace GameServer.Data
                 obj.Add(Y, y);
                 obj.Add(Base.TIME_STAMP, Helper.getTimestamp());
 
-                string errorMessage;
-                if (Validate(obj, out errorMessage))
+                string errorMessage = OutGoingValidate(obj);
+                if (errorMessage == "")
                 {
                     return obj;
                 }
@@ -315,23 +331,76 @@ namespace GameServer.Data
                 }
             }
 
-            public static bool Validate(JObject obj, out string errorMessage)
+            public static string IncomingValidate(JObject obj)
             {
-                errorMessage = "";
                 JToken x = obj[X];
                 JToken y = obj[Y];
 
                 if (x.Type != JTokenType.Float && x.Type != JTokenType.Integer)
                 {
-                    errorMessage ="x field is not an float: " + x.Type + " Value:" + x;
+                    return "x field is not an float: " + x.Type + " Value:" + x;
                 }
 
                 if (y.Type != JTokenType.Float && y.Type != JTokenType.Integer)
                 {
-                    errorMessage ="y field is not an float: " + y.Type + " Value:" + y;
+                    return "y field is not an float: " + y.Type + " Value:" + y;
                 }
 
-                return true;
+                return "";
+            }
+
+            public static string OutGoingValidate(JObject obj)
+            {
+                if (IncomingValidate(obj) != "")
+                {
+                    return IncomingValidate(obj);
+                }
+                return Base.OutGoingValidate(obj);
+            }
+        }
+
+        internal static class MapData
+        {
+            public const string PLAYERS = "players";
+            public const string TURRETS = "turrets";
+            public const string ENEMIES = "enemies";
+
+            public const string TYPE_ID = "type_id";
+            public const string CREATION_ID = "creation_id";
+            public const string NAME = "name";
+            public const string X = "x";
+            public const string Y = "y";
+            public const string WIDTH = "width";
+            public const string HEIGHT = "height";
+            public const string ACTION_RADIOUS = "action_radious";
+            public const string MOVES = "moves";
+
+
+            public static JObject Create(int id) {
+                JObject obj = new JObject();
+                obj.Add(Base.TYPE, TransmitionTypes.MAP_DATA);
+                obj.Add(Base.ID, id);
+                obj.Add(Base.TIME_STAMP, Helper.getTimestamp());
+                obj.Add(PLAYERS, new JArray());
+                obj.Add(TURRETS, new JArray());
+                obj.Add(ENEMIES, new JArray());
+
+                return obj;
+            }
+
+            public static JObject CreateGameObject(int type_id, int creation_id, string name, double x, double y, int width, int height, double action_radious, bool[] moves) {
+                JObject jGameObject = new JObject();
+                jGameObject.Add(TYPE_ID, type_id);
+                jGameObject.Add(CREATION_ID, creation_id);
+                jGameObject.Add(NAME, name);
+                jGameObject.Add(X, x);
+                jGameObject.Add(Y, y);
+                jGameObject.Add(WIDTH, width);
+                jGameObject.Add(HEIGHT, height);
+                jGameObject.Add(ACTION_RADIOUS, action_radious);
+                jGameObject.Add(MOVES, new JArray(moves));
+
+                return jGameObject;
             }
         }
 
@@ -343,6 +412,7 @@ namespace GameServer.Data
             public const string ERROR = "error";
             public const string MOVE = "move";
             public const string PLACE_TURRET = "place_turret";
+            public const string MAP_DATA = "map_data";
 
             public static bool isTransmitionType(string type)
             {
@@ -353,7 +423,8 @@ namespace GameServer.Data
                     type.Equals(PING) ||
                     type.Equals(ERROR) ||
                     type.Equals(MOVE) ||
-                    type.Equals(PLACE_TURRET)
+                    type.Equals(PLACE_TURRET) ||
+                    type.Equals(MAP_DATA)
                     );
             }
         }
@@ -362,34 +433,34 @@ namespace GameServer.Data
         {
             JObject jdata = JObject.Parse(Encoding.ASCII.GetString(data));
 
-            if (Base.Validate(jdata, out errorMessage))
+            if ((errorMessage = Base.IncomingValidate(jdata)) == "")
             {
 
                 switch ((string)jdata[Base.TYPE])
                 {
                     case TransmitionTypes.LOGIN:
-                        Login.Validate(jdata, out errorMessage);
+                        errorMessage = Login.IncomingValidate(jdata);
                         break;
 
                     case TransmitionTypes.LOGOUT:
-                        Logout.Validate(jdata, out errorMessage);
+                        errorMessage = Logout.IncomingValidate(jdata);
                         break;
 
                     case TransmitionTypes.PING:
-                        Ping.Validate(jdata, out errorMessage);
+                        errorMessage = Ping.IncomingValidate(jdata);
                         break;
 
                     case TransmitionTypes.MOVE:
-                        Move.Validate(jdata, out errorMessage);
+                        errorMessage = Move.IncomingValidate(jdata);
                         break;
 
                     case TransmitionTypes.PLACE_TURRET:
-                        PlaceTurret.Validate(jdata, out errorMessage);
+                        errorMessage = PlaceTurret.IncomingValidate(jdata);
                         break;
                 }
             }
 
-            if (string.IsNullOrEmpty(errorMessage))
+            if (errorMessage == "")
             {
                 return jdata;
             }
@@ -401,7 +472,7 @@ namespace GameServer.Data
 
         public static byte[] Serialize(JObject obj)
         {
-            return Encoding.ASCII.GetBytes(obj.ToString());
+            return Encoding.ASCII.GetBytes(string.Join("", obj.ToString().Split('\n', '\t', '\r', ' ')));
         }
     }
 }

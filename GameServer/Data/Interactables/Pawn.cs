@@ -13,10 +13,23 @@ namespace GameServer.Data.Interactables
 
         public List<bool> Moves { get; protected set; }
         public StatSheet Stats { get; protected set; }
+        private bool MoveChange { get; set; }
+        private bool observerSetForUpdate { get; set; }
+        public List<Player> Observers { get; set; }
 
-
-        public Pawn(int id, string name, double x, double y) : base(id, name, x, y)
+        public bool IsMoveing
         {
+            get
+            {
+                return Moves[0] || Moves[1] || Moves[2] || Moves[3];
+            }
+        }
+
+        public Pawn(int id, string name, double x, double y, int width, int height) : base(id, name, x, y, width, height)
+        {
+            Observers = new List<Player>();
+            observerSetForUpdate = false;
+            MoveChange = false;
             Moves = new List<bool> { false, false, false, false };
             Stats = new StatSheet();
             Stats.Heath = 100;
@@ -31,14 +44,29 @@ namespace GameServer.Data.Interactables
             int oppositeMoveIndex = ((d == UP || d == LEFT) ? d + 1 : d - 1);
             if (!isComplete && !Moves[oppositeMoveIndex])
             {
+                if (Moves[d] != true)
+                {
+                    MoveChange = true;
+                }
+
                 return Moves[d] = true;
             }
             else if (isComplete)
             {
+                if (Moves[d] != false)
+                {
+                    MoveChange = true;
+                }
+
                 Moves[d] = false;
                 return true;
             }
             return false;
+        }
+
+        public void updateObservers(List<Player> players) {
+            Observers = players;
+            observerSetForUpdate = false;
         }
 
         public override void update(Game game)
@@ -48,22 +76,40 @@ namespace GameServer.Data.Interactables
 
             if (Moves[UP])
             {
-                Y -= amountToMove;
+               Y = Math.Round(Y - amountToMove, 3);
             }
 
             if (Moves[DOWN])
             {
-                Y += amountToMove;
+                Y = Math.Round(Y + amountToMove, 3);
             }
 
             if (Moves[LEFT])
             {
-                X -= amountToMove;
+                X = Math.Round(X - amountToMove, 3);
             }
 
             if (Moves[RIGHT])
             {
-                X += amountToMove;
+                X = Math.Round(X + amountToMove, 3);
+            }
+
+            if (MoveChange) {
+                MoveChange = false;
+
+                game.Actions.Add(new Action(this, Action.ActionType.MOVE_STATE_CHANGED));
+            }
+
+            if (!observerSetForUpdate) {
+                Action tempAction = new Action(this, Action.ActionType.ENTER_PLAYER_VISION);
+                List<Player> observerList = tempAction.getEffectedPlayerIDs(game);
+
+                foreach (Player observer in observerList) {
+                    if (Observers.Find(o => o.PlayerID == observer.PlayerID) == null) {
+                        game.Actions.Add(tempAction);
+                        observerSetForUpdate = true;
+                    }
+                }
             }
         }
     }

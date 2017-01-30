@@ -77,7 +77,7 @@ namespace GameServer
         private List<User> _users;
         private Server _server;
         private Game _game;
-        private Dictionary<IPEndPoint, byte[]> _inComing;
+        private List<KeyValuePair<IPEndPoint, byte[]>> _inComing;
         private List<OutGoing> _outGoing;
         private List<User> _toRemove;
 
@@ -87,7 +87,7 @@ namespace GameServer
             _users = new List<User>();
             _server = new Server(1234);
             _game = new Game();
-            _inComing = new Dictionary<IPEndPoint, byte[]>();
+            _inComing = new List<KeyValuePair<IPEndPoint, byte[]>>();
             _outGoing = new List<OutGoing>();
             _toRemove = new List<User>();
 
@@ -105,6 +105,7 @@ namespace GameServer
                 handleClientData();
                 updateClientRequests();
                 _game.update();
+                updateVision();
                 sendDataToClients();
                 //checkForDissconnects();
 
@@ -145,7 +146,7 @@ namespace GameServer
 
         private void handleClientData()
         {
-            Dictionary<IPEndPoint, byte[]> messages = _server.PendingMessages;
+            List<KeyValuePair<IPEndPoint, byte[]>> messages = _server.PendingMessages;
 
             foreach (KeyValuePair<IPEndPoint, byte[]> m in messages)
             {
@@ -154,12 +155,11 @@ namespace GameServer
                 if (com != null)
                 {
                     // add new users
-                    User temp = new User(-1, m.Key, Helper.getTimestamp());
-                    if (!_users.Exists(u => u.location.Equals(temp.location)))
+                    if (!_users.Exists(u => u.location.Equals(m.Key)))
                     {
-                        _users.Add(temp);
+                        _users.Add(new User(-1, m.Key, Helper.getTimestamp()));
                     }
-                    _inComing.Add(m.Key, m.Value);
+                    _inComing.Add(m);
                 }
                 else
                 {
@@ -185,7 +185,7 @@ namespace GameServer
 
                     if (comType != Transmition.TransmitionTypes.LOGIN)
                     {
-                        sender.lastMessage = com[Transmition.Base.TIME_STAMP].Value<long>();
+                        sender.lastMessage = Helper.getTimestamp();
                     }
 
                     if (sender.id == -1 &&
@@ -279,7 +279,6 @@ namespace GameServer
                     JObject response = Transmition.Login.Create(id, _game.Players.getPlayerById(id).Name);
                     _outGoing.Add(new OutGoing(subUsers, com));
                 }
-
             }
             else
             {
@@ -336,63 +335,64 @@ namespace GameServer
             }
         }
 
-        /*private void userChat(User sender, Chat com) {
-			if (com.chatType == ChatType.Global) {
-				_outGoing.Add(new OutGoing(_users, com));
+        private void updateVision()
+        {
+            Dictionary<int, JObject> transmisions = new Dictionary<int, JObject>();
 
-			} else if (com.chatType == ChatType.Whisper) {
-				int id = _game.Players.getIdByUsername(com.recipient);
-				User recipient = _users.Find(u => u.id == id);
-				if (recipient == null) {
-					Chat c = new Chat("Recipient: " + com.recipient + "does not exist");
-					_outGoing.Add(new OutGoing(sender.location, c));
-				} else {
-					_outGoing.Add(new OutGoing(recipient.location, com));
-				}
-			}
-		}
+            List<Player> players;
+            foreach (Data.Action a in _game.Actions)
+            {
+                JObject jGameObject = Transmition.MapData.CreateGameObject(
+                    a.Issuer.TypeID, 
+                    a.Issuer.CreationID, 
+                    a.Issuer.Name, 
+                    a.Issuer.X, 
+                    a.Issuer.Y, 
+                    a.Issuer.Width, 
+                    a.Issuer.Height, 
+                    a.Issuer.ActionRadious, 
+                    a.Issuer.Moves.ToArray()
+                    );
 
-		private void userInventory(User sender, Data.Inventory com) {
-			Player p = _game.Players.getPlayerById(sender.id);
-			switch (com.invType) {
+                players = a.getEffectedPlayerIDs(_game);
+                foreach (Player p in players)
+                {
+                    if (a.Type == Data.Action.ActionType.ENTER_PLAYER_VISION &&
+                        a.Issuer.Observers.Find(o => o.CreationID == p.CreationID) != null)
+                    {
+                        continue;
+                    }
 
-				case Data.Inventory.TYPE.Move:
-					p.Inventory.move(com.itemIndex1, com.itemIndex2);
-					break;
+                    if (!transmisions.ContainsKey(p.PlayerID))
+                    {
+                        transmisions.Add(p.PlayerID, Transmition.MapData.Create(p.PlayerID));
+                    }
 
-				case Data.Inventory.TYPE.Add:
-					p.Inventory.add(com.itemIndex1, com.item);
-					break;
-
-				case Data.Inventory.TYPE.Remove:
-					p.Inventory.remove(com.itemIndex1);
-					break;
-
-				case Data.Inventory.TYPE.Combine:
-					break;
-
-				case Data.Inventory.TYPE.Split:
-					break;
-
-			}
-			com.updatedInventory = p.Inventory.getArray();
-			_outGoing.Add(new OutGoing(sender.location, com));
-		}
-
-		private void userInteract(User sender, Interact com) {
-			Player p = _game.Players.getPlayerById(sender.id);
-
-			List<GameObject> objects = _game.GameObjects.getGameObjectsInRange(p);
-
-			foreach (GameObject thing in objects) {
-				if (thing.name == "Kiln") {
-					p.ActiveMiniGame = ((Kiln)thing).game;
+                    if (a.Issuer.TypeID == 1)
+                    {
+                        ((JArray)transmisions[p.PlayerID][Transmition.MapData.PLAYERS]).Add(jGameObject);
+                    }
+                    else if (a.Issuer.TypeID == 100)
+                    {
+                        ((JArray)transmisions[p.PlayerID][Transmition.MapData.TURRETS]).Add(jGameObject);
+                    }
+                    else
+                    {
+                        ((JArray)transmisions[p.PlayerID][Transmition.MapData.ENEMIES]).Add(jGameObject);
+                    }
                 }
-			}
+                // updates the issuer so it doesn't keep spaming new unit found!
+                a.Issuer.updateObservers(players);
+            }
 
-			com.Player = p;
-			_outGoing.Add(new OutGoing(sender.location, com));
-		}*/
+            foreach (KeyValuePair<int, JObject> pair in transmisions)
+            {
+                Logger.Log(Logger.LogLevel.normal, Logger.Type.GAME_ACTION, string.Format("MAP_DATA\tsize: {0}", pair.Value.ToString().Length));
+                _outGoing.Add(new OutGoing(_users.Find(u => u.id == pair.Key).location, pair.Value));
+            }
+
+            _game.Actions.Clear();
+        }
 
         private void sendDataToClients()
         {

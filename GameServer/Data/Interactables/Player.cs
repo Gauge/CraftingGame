@@ -11,7 +11,7 @@ namespace GameServer.Data.Interactables
 
         public int PlayerID { get; }
 
-        public Player(int id, string username) : base(1, username, 0, 0)
+        public Player(int id, string username) : base(1, username, 50, 50, 1, 1)
         {
             PlayerID = id;
         }

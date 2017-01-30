@@ -12,7 +12,7 @@ namespace GameServer.Data.Interactables.Enemies
 
         public Threats Threat { get; private set; }
 
-        public Enemy(int id, string name, double x, double y) : base(id, name, x, y)
+        public Enemy(int id, string name, double x, double y, int width, int height) : base(id, name, x, y, width, height)
         {
             Threat = new Threats();
         }
@@ -23,7 +23,10 @@ namespace GameServer.Data.Interactables.Enemies
 
             foreach (Turret t in game.Turrets)
             {
-                this.Threat.applyThreat(t, t.Threat);
+                if (t.isInInfluenceRadious(X, Y))
+                {
+                    this.Threat.applyThreat(t, t.Threat);
+                }
             }
 
 
@@ -33,35 +36,41 @@ namespace GameServer.Data.Interactables.Enemies
             if (Threat.CurrentThreat != null)
             {
                 GameObject destination = Threat.CurrentThreat.Unit;
-                if (Math.Abs(X - destination.X) < 0.5 && (Moves[LEFT] || Moves[RIGHT]))
+                if (X - destination.X < 0.001 && X - destination.X > -0.001 && (Moves[LEFT] || Moves[RIGHT]))
                 {
                     setMove(LEFT, true);
                     setMove(RIGHT, true);
                 }
 
-                if (Math.Abs(Y - destination.Y) < 0.5 && (Moves[UP] || Moves[DOWN]))
+                if (Y - destination.Y < 0.001 && Y - destination.Y > -0.001 && (Moves[UP] || Moves[DOWN]))
                 {
                     setMove(UP, true);
                     setMove(DOWN, true);
                 }
 
 
-                if (X - destination.X < 0)
+                if (!(X - destination.X < 0.001 && X - destination.X > -0.001))
                 {
-                    setMove(RIGHT, false);
-                }
-                else if (X - destination.X > 0)
-                {
-                    setMove(LEFT, false);
+                    if (X - destination.X < 0 && !Moves[RIGHT])
+                    {
+                        setMove(RIGHT, false);
+                    }
+                    else if (X - destination.X > 0 && !Moves[LEFT])
+                    {
+                        setMove(LEFT, false);
+                    }
                 }
 
-                if (Y - destination.Y < 0)
+                if (!(Y - destination.Y < 0.001 && Y - destination.Y > -0.001))
                 {
-                    setMove(DOWN, false);
-                }
-                else if (Y - destination.Y > 0)
-                {
-                    setMove(LEFT, false);
+                    if (Y - destination.Y < 0 && !Moves[DOWN])
+                    {
+                        setMove(DOWN, false);
+                    }
+                    else if (Y - destination.Y > 0 && !Moves[UP])
+                    {
+                        setMove(UP, false);
+                    }
                 }
             }
 

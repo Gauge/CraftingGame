@@ -2,11 +2,9 @@
 
 namespace GameServer.Data.Interactables
 {
-
-
     public abstract class GameObject
     {
-        public int ObjectID { get; }
+        public int TypeID { get; }
         public int CreationID { get; }
         public string Name { get; }
         public double X { get; set; }
@@ -18,7 +16,7 @@ namespace GameServer.Data.Interactables
         public GameObject(int id, string name, double x, double y, double actionRadious = 3)
         {
             CreationID = Helper.generateCreationID();
-            ObjectID = id;
+            TypeID = id;
             Name = name;
             X = x;
             Y = y;
@@ -30,7 +28,8 @@ namespace GameServer.Data.Interactables
 
         public GameObject(int id, string name, double x, double y, int width, int height, double actionRadious = 3)
         {
-            this.ObjectID = id;
+            CreationID = Helper.generateCreationID();
+            this.TypeID = id;
             this.Name = name;
             this.X = x;
             this.Y = y;

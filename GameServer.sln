@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameServer", "GameServer\GameServer.csproj", "{9ED093E1-5A90-4643-87F0-BAD65BFF14B2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameServerTests", "GameServerTests\GameServerTests.csproj", "{A2DECA8C-E579-4E39-AE0F-E8D717EA2532}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameFrontEndDebugger", "GameFrontEndDebugger\GameFrontEndDebugger.csproj", "{9F5825AB-E1D6-458D-B2A4-770E34E2C510}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +17,10 @@ Global
 		{9ED093E1-5A90-4643-87F0-BAD65BFF14B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9ED093E1-5A90-4643-87F0-BAD65BFF14B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9ED093E1-5A90-4643-87F0-BAD65BFF14B2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A2DECA8C-E579-4E39-AE0F-E8D717EA2532}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A2DECA8C-E579-4E39-AE0F-E8D717EA2532}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A2DECA8C-E579-4E39-AE0F-E8D717EA2532}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A2DECA8C-E579-4E39-AE0F-E8D717EA2532}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F5825AB-E1D6-458D-B2A4-770E34E2C510}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F5825AB-E1D6-458D-B2A4-770E34E2C510}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F5825AB-E1D6-458D-B2A4-770E34E2C510}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F5825AB-E1D6-458D-B2A4-770E34E2C510}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -41,7 +41,10 @@ namespace GameServer.Data.MapData
 
         public Enemy seedSingleBarbarian() {
             Random Rng = new Random(EnemySeed);
-            return new Barbarian(Width * Rng.NextDouble(), Height * Rng.NextDouble());
+
+            double x = Math.Round((Width * Rng.NextDouble()), 3);
+            double y = Math.Round((Height * Rng.NextDouble()), 3);
+            return new Barbarian(x, y);
         }
 
         public bool verifyPlacement(GameObject obj)

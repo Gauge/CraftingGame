@@ -11,7 +11,7 @@ namespace GameServer.Networking {
 		private UdpClient _socket;
 		private IPHostEntry _serverLocation;
 		private int _port;
-		private Dictionary<IPEndPoint, byte[]> _messages;
+		private List<KeyValuePair<IPEndPoint, byte[]>> _messages;
 		private Task _listener;
 		private IPEndPoint _server;
 		private bool _isListening;
@@ -36,14 +36,14 @@ namespace GameServer.Networking {
 			}
 		}
 
-		public Dictionary<IPEndPoint, byte[]> PendingMessages {
+		public List<KeyValuePair<IPEndPoint, byte[]>> PendingMessages {
 			get {
 				if (_messages.Count > 0) {
-					Dictionary<IPEndPoint, byte[]> m = _messages;
-					_messages = new Dictionary<IPEndPoint, byte[]>();
+                    List<KeyValuePair<IPEndPoint, byte[]>> m = _messages;
+					_messages = new List<KeyValuePair<IPEndPoint, byte[]>>();
 					return m;
 				}
-				return new Dictionary<IPEndPoint, byte[]>();
+				return new List<KeyValuePair<IPEndPoint, byte[]>>();
 			}
 		}
 
@@ -51,14 +51,14 @@ namespace GameServer.Networking {
 			_port = 0;
 			_serverLocation = Dns.GetHostEntry("");
 			_socket = new UdpClient();
-			_messages = new Dictionary<IPEndPoint, byte[]>();
+			_messages = new List<KeyValuePair<IPEndPoint, byte[]>>();
 		}
 
 		public Client(string hostname, int port) {
 			_port = port;
 			_serverLocation = Dns.GetHostEntry(hostname);
 			_socket = new UdpClient();
-			_messages = new Dictionary<IPEndPoint, byte[]>();
+			_messages = new List<KeyValuePair<IPEndPoint, byte[]>>();
 			updateConnection();
 		}
 
@@ -83,6 +83,7 @@ namespace GameServer.Networking {
 			_socket.Close();
 			_isListening = false;
 			Task.WaitAll(_listener);
+            _socket.Dispose();
 			_listener.Dispose();
 		}
 
@@ -91,16 +92,16 @@ namespace GameServer.Networking {
 			while (_isListening) {
 				try {
 					byte[] data = _socket.Receive(ref _server);
-					_messages.Add(_server, data);
+					_messages.Add(new KeyValuePair<IPEndPoint, byte[]>(_server, data));
 				} catch {
-					Stop();
+                    Stop();
 				}
 			}
 			Console.WriteLine("No longer Listening for server");
 
 		}
 
-		public void send(string data) {
+        public void send(string data) {
 			send(Encoding.ASCII.GetBytes(data));
 		}
 

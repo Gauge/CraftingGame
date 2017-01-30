@@ -1,0 +1,102 @@
+Server Client Transmisions
+
+Login | Client
+{
+	"type": "login",
+	"username": <string>
+}
+
+Login | Server
+{
+	"id": <int>,
+	"type": "login",
+	"username": <string>,
+	"timestamp": <longint>
+}
+
+Logout | Client
+{
+	"type": "logout"
+}
+
+Logout | Server
+{
+	"id": <int>,
+	"type": "logout",
+	"timestamp": <longint>
+}
+
+
+Move | Client
+{
+	
+}
+
+Move | Server
+{
+
+}
+
+PlaceTurret | Client
+{
+
+}
+
+PlaceTurret | Server
+{
+
+}
+
+
+MapData | Server Only
+{
+	"id": <int>,
+	"type": "map_data",
+	"timestamp": <longint>,
+	"players": 
+	[
+		{
+			"type_id": <ObjectID longint>
+			"creation_id": <int>,
+			"name": <name>,
+			"x": <int>,
+			"y": <int>,
+			"width": <int>,
+			"height": <int>,
+			"action_radious": <double>
+			"move":
+			[
+				<bool>,<bool>,<bool>,<bool>
+			]
+		}
+	],
+	"turrets": 
+	[
+		{
+			"type_id": <ObjectID longint>
+			"creation_id": <int>,
+			"name": <name>,
+			"x": <int>,
+			"y": <int>,
+			"width": <int>,
+			"height": <int>,
+			"action_radious": <double>
+		}
+	],
+	"enemies":
+	[
+		{
+			"type_id": <ObjectID longint>
+			"creation_id": <int>,
+			"name": <name>,
+			"x": <int>,
+			"y": <int>,
+			"width": <int>,
+			"height": <int>,
+			"action_radious": <double>
+			[
+				<bool>,<bool>,<bool>,<bool>
+			]
+		}
+	]
+}

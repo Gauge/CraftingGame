@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace GameServer.Data.Interactables.Tower
+﻿namespace GameServer.Data.Interactables.Tower
 {
-    public class Turret : GameObject
+    public class Turret : Pawn
     {
 
         public const int VISION_RADIOUS = 32;
@@ -15,7 +9,6 @@ namespace GameServer.Data.Interactables.Tower
         public int OwnerID { get; }
         public int Threat { get; set; }
         public double Influence { get; set; } // the radious a units threat reaches
-        public StatSheet Stats { get; private set; }
 
 
         public Turret(int playerID, int x, int y) : base(100, "Turret", x, y, 2, 2)

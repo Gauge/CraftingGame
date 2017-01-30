@@ -8,7 +8,7 @@ namespace GameServer.Data.Interactables.Enemies
 {
     class Barbarian : Enemy
     {
-        public Barbarian(double x, double y) : base(1000, "Barbarian", x, y)
+        public Barbarian(double x, double y) : base(1000, "Barbarian", x, y, 1, 1)
         {
             Stats.Heath = 500;
             Stats.MoveSpeed = 500;

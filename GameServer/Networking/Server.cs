@@ -9,7 +9,7 @@ namespace GameServer.Networking {
 	public class Server {
 
 		private int _port;
-		private Dictionary<IPEndPoint, byte[]> _messages;
+		private List<KeyValuePair<IPEndPoint, byte[]>> _messages;
 		private UdpClient _socket;
 		private Task _clientListener;
 		private bool _isListening = false;
@@ -18,21 +18,21 @@ namespace GameServer.Networking {
 			get { return _port; }
 		}
 
-		public Dictionary<IPEndPoint, byte[]> PendingMessages {
+		public List<KeyValuePair<IPEndPoint, byte[]>> PendingMessages {
 			get {
 				if (_messages.Count > 0) {
-					Dictionary<IPEndPoint, byte[]> m = _messages;
-					_messages = new Dictionary<IPEndPoint, byte[]>();
+                    List<KeyValuePair<IPEndPoint, byte[]>> m = _messages;
+					_messages = new List<KeyValuePair<IPEndPoint, byte[]>>();
 					return m;
 				}
-				return new Dictionary<IPEndPoint, byte[]>();
+				return new List<KeyValuePair<IPEndPoint, byte[]>>();
             }
 		}
 
 		public Server(int port) {
 			_port = port;
 			_socket = new UdpClient(new IPEndPoint(IPAddress.Any, port));
-			_messages =  new Dictionary<IPEndPoint, byte[]>();
+			_messages =  new List<KeyValuePair<IPEndPoint, byte[]>>();
 		}
 
 		public void Start() {
@@ -55,7 +55,7 @@ namespace GameServer.Networking {
 			while (_isListening) {
 				try {
 					byte[] data = _socket.Receive(ref client);
-					_messages.Add(client, data);
+					_messages.Add(new KeyValuePair<IPEndPoint, byte[]>(client, data));
 				} catch (SocketException e) {
 					Console.WriteLine(e.ToString());
 				}
