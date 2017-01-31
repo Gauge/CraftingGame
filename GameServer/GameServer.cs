@@ -127,10 +127,8 @@ namespace GameServer
             while (_toRemove.Count > 0)
             {
                 user = _toRemove.Dequeue();
-                string username = "";
                 if (user.id != -1)
                 {
-                    username = _game.Players.getPlayerById(user.id).Name;
                     _game.Players.removePlayer(user.id);
                     _outGoing.Enqueue(new OutGoing(_users, Transmition.Logout.Create(user.id)));
                     _users.Remove(user);
