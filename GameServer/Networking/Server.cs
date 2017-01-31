@@ -8,31 +8,22 @@ using System.Threading.Tasks;
 namespace GameServer.Networking {
 	public class Server {
 
-		private int _port;
-		private List<KeyValuePair<IPEndPoint, byte[]>> _messages;
-		private UdpClient _socket;
+
+        private int _port;
+        private UdpClient _socket;
 		private Task _clientListener;
 		private bool _isListening = false;
 
-		public int Port {
-			get { return _port; }
-		}
+        public Queue<KeyValuePair<IPEndPoint, byte[]>> MessageQueue { get; }
 
-		public List<KeyValuePair<IPEndPoint, byte[]>> PendingMessages {
-			get {
-				if (_messages.Count > 0) {
-                    List<KeyValuePair<IPEndPoint, byte[]>> m = _messages;
-					_messages = new List<KeyValuePair<IPEndPoint, byte[]>>();
-					return m;
-				}
-				return new List<KeyValuePair<IPEndPoint, byte[]>>();
-            }
+        public int Port {
+			get { return _port; }
 		}
 
 		public Server(int port) {
 			_port = port;
 			_socket = new UdpClient(new IPEndPoint(IPAddress.Any, port));
-			_messages =  new List<KeyValuePair<IPEndPoint, byte[]>>();
+            MessageQueue =  new Queue<KeyValuePair<IPEndPoint, byte[]>>();
 		}
 
 		public void Start() {
@@ -55,7 +46,7 @@ namespace GameServer.Networking {
 			while (_isListening) {
 				try {
 					byte[] data = _socket.Receive(ref client);
-					_messages.Add(new KeyValuePair<IPEndPoint, byte[]>(client, data));
+					MessageQueue.Enqueue(new KeyValuePair<IPEndPoint, byte[]>(client, data));
 				} catch (SocketException e) {
 					Console.WriteLine(e.ToString());
 				}

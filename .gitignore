@@ -13,3 +13,9 @@ packages/Newtonsoft.Json.9.0.1/tools/install.ps1
 packages/Newtonsoft.Json.9.0.1/lib/portable-net45+wp80+win8+wpa81/Newtonsoft.Json.xml
 packages/Newtonsoft.Json.9.0.1/lib/net45/Newtonsoft.Json.xml
 packages/Newtonsoft.Json.9.0.1/lib/net40/Newtonsoft.Json.xml
+packages/Newtonsoft.Json.Schema.2.0.8/lib/net35/Newtonsoft.Json.Schema.xml
+packages/Newtonsoft.Json.Schema.2.0.8/lib/net40/Newtonsoft.Json.Schema.xml
+packages/Newtonsoft.Json.Schema.2.0.8/lib/net45/Newtonsoft.Json.Schema.xml
+packages/Newtonsoft.Json.Schema.2.0.8/lib/netstandard1.3/Newtonsoft.Json.Schema.xml
+packages/Newtonsoft.Json.Schema.2.0.8/Newtonsoft.Json.Schema.2.0.8.nupkg
+packages/Newtonsoft.Json.Schema.2.0.8/lib/portable-net45+wp80+win8+wpa81/Newtonsoft.Json.Schema.xml

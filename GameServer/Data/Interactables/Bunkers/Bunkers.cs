@@ -4,17 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GameServer.Data.Interactables.Tower
+namespace GameServer.Data.Interactables.Bunkers
 {
-    public class Turrets : List<Turret>
+    public class Bunkers : List<Bunker>
     {
 
-        public Turret getTurretByPlayerID(int playerID)
+        public Bunker getBunkerByPlayerID(int playerID)
         {
             return this.Find(i => i.OwnerID == playerID);
         }
 
-        public void removeTurretByPlayerID(int playerID) {
+        public void removeBunkerByPlayerID(int playerID) {
             this.RemoveAll(i => i.OwnerID == playerID);
         }
 
@@ -25,7 +25,7 @@ namespace GameServer.Data.Interactables.Tower
 
         public void update(Game game)
         {
-            foreach (Turret t in this)
+            foreach (Bunker t in this)
             {
                 t.update(game);
             }

@@ -1,8 +1,4 @@
-﻿using GameServer.Data.Interactables.Tower;
-using System.Collections.Generic;
-//using GameServer.Data.Resources;
-
-namespace GameServer.Data.Interactables
+﻿namespace GameServer.Data.Interactables
 {
     public class Player : Pawn
     {

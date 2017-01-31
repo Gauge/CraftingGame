@@ -56,9 +56,13 @@
     <NoWin32Manifest>true</NoWin32Manifest>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>libs\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json.Schema, Version=2.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.Schema.2.0.8\lib\net45\Newtonsoft.Json.Schema.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -72,8 +76,8 @@
     <Compile Include="Data\Action.cs" />
     <Compile Include="Data\Interactables\Enemies\Barbarian.cs" />
     <Compile Include="Data\Interactables\Enemies\Enemy.cs" />
-    <Compile Include="Data\Interactables\Turret\Turrets.cs" />
-    <Compile Include="Data\Interactables\Turret\Turret.cs" />
+    <Compile Include="Data\Interactables\Bunkers\Bunkers.cs" />
+    <Compile Include="Data\Interactables\Bunkers\Bunker.cs" />
     <Compile Include="Data\Threats.cs" />
     <Compile Include="Data\MapData\Map.cs" />
     <Compile Include="Data\Interactables\GameObjects.cs" />
@@ -83,17 +87,32 @@
     <Compile Include="Data\Threat.cs" />
     <Compile Include="Data\Utility\Helper.cs" />
     <Compile Include="Data\Utility\Logger.cs" />
-    <Compile Include="Data\Utility\Transmition.cs" />
+    <Compile Include="Data\TransmitionData\Transmition.cs" />
     <Compile Include="GameServer.cs" />
     <Compile Include="Networking\Client.cs" />
     <Compile Include="Data\Game.cs" />
     <Compile Include="Data\Interactables\Player.cs" />
-    <Compile Include="Networking\List.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Networking\Server.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="Data\TransmitionData\place_turret.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Data\TransmitionData\move.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Data\TransmitionData\ping.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Data\TransmitionData\logout.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Data\TransmitionData\login.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Data\Interactables\GameObject.cs" />

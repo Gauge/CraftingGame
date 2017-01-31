@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using GameServer.Data.Interactables;
 using GameServer.Data.MapData;
-using GameServer.Data.Interactables.Tower;
+using GameServer.Data.Interactables.Bunkers;
 using GameServer.Data.Interactables.Enemies;
 
 namespace GameServer.Data
@@ -11,7 +11,7 @@ namespace GameServer.Data
     {
         public Players Players { get; private set; }
         public GameObjects Enemies { get; private set; }
-        public Turrets Turrets { get; private set; }
+        public Bunkers Turrets { get; private set; }
         public Map Map { get; private set; }
         public List<Action> Actions { get; private set; }
 
@@ -21,18 +21,18 @@ namespace GameServer.Data
             Actions = new List<Action>();
             Players = new Players();
             Enemies = new GameObjects();
-            Turrets = new Turrets();
+            Turrets = new Bunkers();
             Map = new Map();
             Enemies.AddRange(Map.seedBarbarians());
         }
 
-        public bool placeTurret(int playerID, int x, int y, out string errorMessage)
+        public bool placeBunker(int playerID, int x, int y, out string errorMessage)
         {
             errorMessage = "";
 
-            if (Turrets.getTurretByPlayerID(playerID) == null)
+            if (Turrets.getBunkerByPlayerID(playerID) == null)
             {
-                Turret t = new Turret(playerID, x, y);
+                Bunker t = new Bunker(playerID, x, y);
                 if (Map.verifyPlacement(t) && Enemies.getGameObjectsOverlapping(t.X, t.Y, t.Width, t.Height).Count == 0)
                 {
                     if (!Turrets.isInNoBuildZone(t.X, t.Y))

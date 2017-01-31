@@ -1,6 +1,6 @@
-﻿namespace GameServer.Data.Interactables.Tower
+﻿namespace GameServer.Data.Interactables.Bunkers
 {
-    public class Turret : Pawn
+    public class Bunker : Pawn
     {
 
         public const int VISION_RADIOUS = 32;
@@ -11,7 +11,7 @@
         public double Influence { get; set; } // the radious a units threat reaches
 
 
-        public Turret(int playerID, int x, int y) : base(100, "Turret", x, y, 2, 2)
+        public Bunker(int playerID, int x, int y) : base(100, "Turret", x, y, 2, 2)
         {
             OwnerID = playerID;
             Influence = 100;

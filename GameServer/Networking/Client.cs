@@ -10,13 +10,14 @@ namespace GameServer.Networking {
 
 		private UdpClient _socket;
 		private IPHostEntry _serverLocation;
-		private int _port;
-		private List<KeyValuePair<IPEndPoint, byte[]>> _messages;
+        private int _port;
 		private Task _listener;
 		private IPEndPoint _server;
 		private bool _isListening;
 
-		public bool IsConnected {
+        public Queue<KeyValuePair<IPEndPoint, byte[]>> MessageQueue { get; }
+
+        public bool IsConnected {
 			get { return (_listener != null && _listener.Status == TaskStatus.Running && _isListening); }
 		}
 
@@ -36,29 +37,18 @@ namespace GameServer.Networking {
 			}
 		}
 
-		public List<KeyValuePair<IPEndPoint, byte[]>> PendingMessages {
-			get {
-				if (_messages.Count > 0) {
-                    List<KeyValuePair<IPEndPoint, byte[]>> m = _messages;
-					_messages = new List<KeyValuePair<IPEndPoint, byte[]>>();
-					return m;
-				}
-				return new List<KeyValuePair<IPEndPoint, byte[]>>();
-			}
-		}
-
 		public Client() {
 			_port = 0;
 			_serverLocation = Dns.GetHostEntry("");
 			_socket = new UdpClient();
-			_messages = new List<KeyValuePair<IPEndPoint, byte[]>>();
+			MessageQueue = new Queue<KeyValuePair<IPEndPoint, byte[]>>();
 		}
 
 		public Client(string hostname, int port) {
 			_port = port;
 			_serverLocation = Dns.GetHostEntry(hostname);
 			_socket = new UdpClient();
-			_messages = new List<KeyValuePair<IPEndPoint, byte[]>>();
+			MessageQueue = new Queue<KeyValuePair<IPEndPoint, byte[]>>();
 			updateConnection();
 		}
 
@@ -92,7 +82,7 @@ namespace GameServer.Networking {
 			while (_isListening) {
 				try {
 					byte[] data = _socket.Receive(ref _server);
-					_messages.Add(new KeyValuePair<IPEndPoint, byte[]>(_server, data));
+					MessageQueue.Enqueue(new KeyValuePair<IPEndPoint, byte[]>(_server, data));
 				} catch {
                     Stop();
 				}

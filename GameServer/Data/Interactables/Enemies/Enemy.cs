@@ -1,4 +1,4 @@
-﻿using GameServer.Data.Interactables.Tower;
+﻿using GameServer.Data.Interactables.Bunkers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +21,7 @@ namespace GameServer.Data.Interactables.Enemies
         {
             base.update(game);
 
-            foreach (Turret t in game.Turrets)
+            foreach (Bunker t in game.Turrets)
             {
                 if (t.isInInfluenceRadious(X, Y))
                 {

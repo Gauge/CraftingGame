@@ -83,12 +83,12 @@ namespace GameFrontEndDebugger
 
         private void handleServerMessages()
         {
-            List<KeyValuePair<IPEndPoint, byte[]>> messages = _client.PendingMessages;
-
-            foreach (KeyValuePair<IPEndPoint, byte[]> m in messages)
+            KeyValuePair<IPEndPoint, byte[]> m;
+            while (_client.MessageQueue.Count > 0)
             {
-                JObject com = JObject.Parse(Encoding.ASCII.GetString(m.Value));
+                m = _client.MessageQueue.Dequeue();
 
+                JObject com = JObject.Parse(Encoding.ASCII.GetString(m.Value));
                 string type = (string)com["type"];
 
                 if (type == "map_data")
@@ -198,7 +198,7 @@ namespace GameFrontEndDebugger
 
             if (e.KeyCode == Keys.NumPad1)
             {
-                transmit("{\"type\": \"login\",\"username\": \"Gauge\"}");
+                transmit("{\"type\": \"login\",\"username\": \"Gauge "+(int)(new Random().NextDouble()*100)+"\"}");
             }
 
             if (e.KeyCode == Keys.NumPad2)

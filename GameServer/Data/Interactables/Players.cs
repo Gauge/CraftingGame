@@ -9,7 +9,7 @@ namespace GameServer.Data.Interactables
     public class Players : List<Player>
     {
 
-        private List<int> _playersToRemove;
+        private Queue<int> _playersToRemove;
         private int _currentID = 1;
         private int _maxID = 99999999;
         private bool _maxedOut = false;
@@ -42,17 +42,18 @@ namespace GameServer.Data.Interactables
 
         public Players()
         {
-            _playersToRemove = new List<int>();
+            _playersToRemove = new Queue<int>();
         }
 
         private void removePlayers(Game game)
         {
-            foreach (int id in _playersToRemove)
+            int id;
+            while ( _playersToRemove.Count > 0)
             {
-                game.Turrets.removeTurretByPlayerID(id);
+                id = _playersToRemove.Dequeue();
+                game.Turrets.removeBunkerByPlayerID(id);
                 this.RemoveAll(p => p.PlayerID == id);
             }
-            _playersToRemove.Clear();
         }
 
         public int addPlayer(string username)
@@ -72,7 +73,7 @@ namespace GameServer.Data.Interactables
 
         public void removePlayer(int id)
         {
-            _playersToRemove.Add(id);
+            _playersToRemove.Enqueue(id);
         }
 
         public bool loadPlayers(List<Player> players)

@@ -77,9 +77,9 @@ namespace GameServer
         private List<User> _users;
         private Server _server;
         private Game _game;
-        private List<KeyValuePair<IPEndPoint, byte[]>> _inComing;
-        private List<OutGoing> _outGoing;
-        private List<User> _toRemove;
+        private Queue<KeyValuePair<IPEndPoint, JObject>> _inComing;
+        private Queue<OutGoing> _outGoing;
+        private Queue<User> _toRemove;
 
 
         public GameServer()
@@ -87,9 +87,9 @@ namespace GameServer
             _users = new List<User>();
             _server = new Server(1234);
             _game = new Game();
-            _inComing = new List<KeyValuePair<IPEndPoint, byte[]>>();
-            _outGoing = new List<OutGoing>();
-            _toRemove = new List<User>();
+            _inComing = new Queue<KeyValuePair<IPEndPoint, JObject>>();
+            _outGoing = new Queue<OutGoing>();
+            _toRemove = new Queue<User>();
 
             _server.Start();
             mainLoop();
@@ -117,23 +117,22 @@ namespace GameServer
             foreach (User u in _users)
             {
                 if (u.TimedOut)
-                    _toRemove.Add(u);
+                    _toRemove.Enqueue(u);
             }
         }
 
         private void handleRemovedClients()
         {
-
-            foreach (User user in _toRemove)
+            User user;
+            while (_toRemove.Count > 0)
             {
+                user = _toRemove.Dequeue();
                 string username = "";
                 if (user.id != -1)
                 {
                     username = _game.Players.getPlayerById(user.id).Name;
                     _game.Players.removePlayer(user.id);
-                    _outGoing.Add(new OutGoing(_users, Transmition.Logout.Create(user.id)));
-
-                    Logger.Log(Logger.LogLevel.normal, Logger.Type.DISCONNECTED, string.Format("{0} | {1}", user.location, username));
+                    _outGoing.Enqueue(new OutGoing(_users, Transmition.Logout.Create(user.id)));
                     _users.Remove(user);
                 }
                 else
@@ -141,16 +140,15 @@ namespace GameServer
                     _users.Remove(user);
                 }
             }
-            _toRemove.Clear();
         }
 
         private void handleClientData()
         {
-            List<KeyValuePair<IPEndPoint, byte[]>> messages = _server.PendingMessages;
-
-            foreach (KeyValuePair<IPEndPoint, byte[]> m in messages)
+            KeyValuePair<IPEndPoint, byte[]> m;
+            while (_server.MessageQueue.Count > 0)
             {
-                string errorMessage;
+                m = _server.MessageQueue.Dequeue();
+                IList<string> errorMessage;
                 JObject com = Transmition.Parse(m.Value, out errorMessage);
                 if (com != null)
                 {
@@ -159,88 +157,71 @@ namespace GameServer
                     {
                         _users.Add(new User(-1, m.Key, Helper.getTimestamp()));
                     }
-                    _inComing.Add(m);
+                    _inComing.Enqueue(new KeyValuePair<IPEndPoint, JObject>(m.Key, com));
                 }
                 else
                 {
-                    Logger.Log(Logger.LogLevel.normal, Logger.Type.ERROR, string.Format("TransmisionError: {0}", errorMessage));
-                    JObject error = Transmition.Error.Create("TransmisionError", 605, errorMessage);
-                    _outGoing.Add(new OutGoing(m.Key, error));
+                    JObject error = Transmition.Error.Create("TransmisionError", 605, (List<string>)errorMessage);
+                    _outGoing.Enqueue(new OutGoing(m.Key, error));
                 }
+
             }
         }
 
         private void updateClientRequests()
         {
-
-            foreach (KeyValuePair<IPEndPoint, byte[]> m in _inComing)
+            KeyValuePair<IPEndPoint, JObject> m;
+            while (_inComing.Count > 0)
             {
+                m = _inComing.Dequeue();
                 int userIndex = _users.FindIndex(u => u.location.Equals(m.Key));
-                string emessage;
-                JObject com = Transmition.Parse(m.Value, out emessage);
-                if (com != null)
+                JObject com = m.Value;
+
+                User sender = _users[userIndex];
+                string comType = com[Transmition.Base.TYPE].Value<string>();
+
+                if (comType != Transmition.TransmitionTypes.LOGIN)
                 {
-                    User sender = _users[userIndex];
-                    string comType = com[Transmition.Base.TYPE].Value<string>();
+                    sender.lastMessage = Helper.getTimestamp();
+                }
 
-                    if (comType != Transmition.TransmitionTypes.LOGIN)
-                    {
-                        sender.lastMessage = Helper.getTimestamp();
-                    }
+                if (sender.id == -1 &&
+                    comType != Transmition.TransmitionTypes.LOGIN &&
+                    comType != Transmition.TransmitionTypes.LOGOUT &&
+                    comType != Transmition.TransmitionTypes.PING)
+                {
 
-                    if (sender.id == -1 &&
-                        comType != Transmition.TransmitionTypes.LOGIN &&
-                        comType != Transmition.TransmitionTypes.LOGOUT &&
-                        comType != Transmition.TransmitionTypes.PING)
-                    {
+                    string message = string.Format("{0} | sent the command: {1} without first logging in", sender.location, comType);
+                    JObject errorMessage = Transmition.Error.Create("LoginError", 1, message);
+                    _outGoing.Enqueue(new OutGoing(sender.location, errorMessage));
+                    logout(sender);
+                    continue;
 
-                        string message = string.Format("{0} | sent the command: {1} without first logging in", sender.location, comType);
-                        Logger.Log(Logger.LogLevel.normal, Logger.Type.ERROR, message);
-                        JObject errorMessage = Transmition.Error.Create("LoginError", 1, message);
-                        _outGoing.Add(new OutGoing(sender.location, errorMessage));
+                }
+
+                switch (comType)
+                {
+                    case Transmition.TransmitionTypes.PING:
+                        ping(sender);
+                        break;
+
+                    case Transmition.TransmitionTypes.LOGIN:
+                        login(sender, com);
+                        break;
+
+                    case Transmition.TransmitionTypes.LOGOUT:
                         logout(sender);
-                        continue;
+                        break;
 
-                    }
+                    case Transmition.TransmitionTypes.MOVE:
+                        move(sender, com);
+                        break;
 
-                    switch (comType)
-                    {
-                        case Transmition.TransmitionTypes.PING:
-                            ping(sender);
-                            break;
-
-                        case Transmition.TransmitionTypes.LOGIN:
-                            login(sender, com);
-                            break;
-
-                        case Transmition.TransmitionTypes.LOGOUT:
-                            logout(sender);
-                            break;
-
-                        case Transmition.TransmitionTypes.MOVE:
-                            move(sender, com);
-                            break;
-
-                        case Transmition.TransmitionTypes.PLACE_TURRET:
-                            place_turret(sender, com);
-                            break;
-
-                            /*case ComType.Chat:
-                                //userChat(sender, (Chat)com);
-                                break;
-
-                            case ComType.Inventory:
-                                //userInventory(sender, (Data.Inventory)com);
-                                break;
-
-                            case ComType.Interact:
-                                //userInteract(sender, (Interact)com);
-                                break;
-                            */
-                    }
+                    case Transmition.TransmitionTypes.PLACE_TURRET:
+                        place_turret(sender, com);
+                        break;
                 }
             }
-            _inComing.Clear();
         }
 
         private void login(User sender, JObject com)
@@ -254,9 +235,8 @@ namespace GameServer
             {
                 string name = _game.Players.getPlayerById(sender.id).Name;
 
-                Logger.Log(Logger.LogLevel.normal, Logger.Type.ERROR, string.Format("Multiple login attemps {0} | {1}", sender.location, name));
                 JObject error = Transmition.Error.Create("CurrentlyActive", 345, string.Format("This user is currently active as: {0}", name));
-                _outGoing.Add(new OutGoing(sender.location, error));
+                _outGoing.Enqueue(new OutGoing(sender.location, error));
                 return;
             }
 
@@ -265,33 +245,30 @@ namespace GameServer
                 // update user
                 int sendersUserIndex = _users.FindIndex(u => u.location == sender.location);
                 sender.id = id;
-                _users[sendersUserIndex] = sender;
-                Logger.Log(Logger.LogLevel.normal, Logger.Type.CONNECTED, string.Format("{0} | {1}", sender.location, username));
+                _users[sendersUserIndex] = sender;;
 
                 // let the user know they are logged in
                 com[Transmition.Base.ID] = id;
-                _outGoing.Add(new OutGoing(sender.location, com));
+                _outGoing.Enqueue(new OutGoing(sender.location, com));
 
                 // send to everyone accept the user logging in
                 List<User> subUsers = _users.FindAll(u => u.id != id);
                 if (subUsers.Count > 0)
                 {
                     JObject response = Transmition.Login.Create(id, _game.Players.getPlayerById(id).Name);
-                    _outGoing.Add(new OutGoing(subUsers, com));
+                    _outGoing.Enqueue(new OutGoing(subUsers, com));
                 }
             }
             else
             {
                 JObject error = Transmition.Error.Create("NameInUse", 344, string.Format("The name '{0}' is currently in use. Please use a different name to login", username));
-                _outGoing.Add(new OutGoing(sender.location, error));
-
-                Logger.Log(Logger.LogLevel.normal, Logger.Type.ERROR, string.Format("The name '{0}' is already in use", username));
+                _outGoing.Enqueue(new OutGoing(sender.location, error));
             }
         }
 
         private void logout(User sender)
         {
-            _toRemove.Add(sender);
+            _toRemove.Enqueue(sender);
         }
 
         private void ping(User sender)
@@ -299,8 +276,7 @@ namespace GameServer
             if (sender.id != -1)
             {
                 JObject ping = Transmition.Ping.Create(sender.id);
-                Logger.Log(Logger.LogLevel.debug, Logger.Type.PING, string.Format("{0} | {1}", _game.Players.getPlayerById(sender.id).Name, ping[Transmition.Base.TIME_STAMP]));
-                _outGoing.Add(new OutGoing(sender.location, ping));
+                _outGoing.Enqueue(new OutGoing(sender.location, ping));
             }
         }
 
@@ -312,8 +288,7 @@ namespace GameServer
             _game.Players.getPlayerById(sender.id).setMove(direction, isComplete);
 
             Player p = _game.Players.getPlayerById(sender.id);
-            Logger.Log(Logger.LogLevel.normal, Logger.Type.GAME_ACTION, string.Format("{0}\tMove: {1:F2}:{2:F2}", ((!isComplete) ? "START" : "FINISH"), p.X, p.Y));
-            _outGoing.Add(new OutGoing(_users, Transmition.Move.Create(sender.id, direction, isComplete, p.X, p.Y)));
+            _outGoing.Enqueue(new OutGoing(_users, Transmition.Move.Create(sender.id, direction, isComplete, p.X, p.Y)));
         }
 
         private void place_turret(User sender, JObject com)
@@ -322,16 +297,14 @@ namespace GameServer
             int y = com[Transmition.PlaceTurret.Y].Value<int>();
 
             string errorMessage;
-            if (_game.placeTurret(sender.id, x, y, out errorMessage))
+            if (_game.placeBunker(sender.id, x, y, out errorMessage))
             {
-                Logger.Log(Logger.LogLevel.normal, Logger.Type.GAME_ACTION, string.Format("Place Turret: {0:F2}:{1:F2}", x, y));
                 com[Transmition.Base.ID] = sender.id;
-                _outGoing.Add(new OutGoing(_users, com));
+                _outGoing.Enqueue(new OutGoing(_users, com));
             }
             else
             {
-                Logger.Log(Logger.LogLevel.normal, Logger.Type.ERROR, string.Format("PlaceTurretException: {0}", errorMessage));
-                _outGoing.Add(new OutGoing(sender.location, Transmition.Error.Create("PlaceTurretException", 2435, errorMessage)));
+                _outGoing.Enqueue(new OutGoing(sender.location, Transmition.Error.Create("PlaceTurretException", 2435, errorMessage)));
             }
         }
 
@@ -342,15 +315,15 @@ namespace GameServer
             List<Player> players;
             foreach (Data.Action a in _game.Actions)
             {
-                JObject jGameObject = Transmition.MapData.CreateGameObject(
-                    a.Issuer.TypeID, 
-                    a.Issuer.CreationID, 
-                    a.Issuer.Name, 
-                    a.Issuer.X, 
-                    a.Issuer.Y, 
-                    a.Issuer.Width, 
-                    a.Issuer.Height, 
-                    a.Issuer.ActionRadious, 
+                JObject jGameObject = Transmition.MapData.GameObject.Create(
+                    a.Issuer.TypeID,
+                    a.Issuer.CreationID,
+                    a.Issuer.Name,
+                    a.Issuer.X,
+                    a.Issuer.Y,
+                    a.Issuer.Width,
+                    a.Issuer.Height,
+                    a.Issuer.ActionRadious,
                     a.Issuer.Moves.ToArray()
                     );
 
@@ -387,8 +360,7 @@ namespace GameServer
 
             foreach (KeyValuePair<int, JObject> pair in transmisions)
             {
-                Logger.Log(Logger.LogLevel.normal, Logger.Type.GAME_ACTION, string.Format("MAP_DATA\tsize: {0}", pair.Value.ToString().Length));
-                _outGoing.Add(new OutGoing(_users.Find(u => u.id == pair.Key).location, pair.Value));
+                _outGoing.Enqueue(new OutGoing(_users.Find(u => u.id == pair.Key).location, pair.Value));
             }
 
             _game.Actions.Clear();
@@ -396,12 +368,14 @@ namespace GameServer
 
         private void sendDataToClients()
         {
-            foreach (OutGoing message in _outGoing)
+            OutGoing message;
+            while (_outGoing.Count > 0)
             {
+                message = _outGoing.Dequeue();
                 byte[] data = Transmition.Serialize(message.data);
                 _server.broadcast(message.clients, data);
+                Logger.Log(Level.NORMAL, Transmition.GetDisplayString(message.data), message.data.ToString(Newtonsoft.Json.Formatting.None));
             }
-            _outGoing.Clear();
         }
 
         static void Main(string[] args)
