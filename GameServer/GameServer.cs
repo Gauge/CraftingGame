@@ -243,7 +243,7 @@ namespace GameServer
                 // update user
                 int sendersUserIndex = _users.FindIndex(u => u.location == sender.location);
                 sender.id = id;
-                _users[sendersUserIndex] = sender;;
+                _users[sendersUserIndex] = sender;
 
                 // let the user know they are logged in
                 com[Transmition.Base.ID] = id;
