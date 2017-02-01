@@ -9,6 +9,13 @@ namespace GameServer.Data.Interactables
     public class GameObjects : List<GameObject>
     {
 
+        public Queue<GameObject> _toRemove;
+
+        public GameObjects()
+        {
+            _toRemove = new Queue<GameObject>();
+        }
+
         public List<GameObject> getGameObjectsInRange(Player p)
         {
             return getGameObjectsInRange(p.X, p.Y);
@@ -26,10 +33,21 @@ namespace GameServer.Data.Interactables
 
         public void update(Game game)
         {
+
+            while (_toRemove.Count > 0)
+            {
+                this.Remove(_toRemove.Dequeue());
+            }
+
             foreach (GameObject i in this)
             {
                 i.update(game);
             }
         }
+
+        public void removeGameObject(GameObject obj) {
+            _toRemove.Enqueue(obj);
+        }
+
     }
 }

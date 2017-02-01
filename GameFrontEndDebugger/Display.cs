@@ -106,7 +106,7 @@ namespace GameFrontEndDebugger
                         }
                     }
 
-                    foreach (JObject t in ((JArray)com["turrets"]))
+                    foreach (JObject t in ((JArray)com["bunkers"]))
                     {
                         int index = Bunkers.FindIndex(per => (int)per["creation_id"] == (int)t["creation_id"]);
                         if (index == -1)
@@ -184,7 +184,7 @@ namespace GameFrontEndDebugger
             {
                 if (zoom > 1)
                 {
-                    zoom -= 1;
+                    zoom -= (64f/100f);
                 }
             }
 
@@ -192,7 +192,7 @@ namespace GameFrontEndDebugger
             {
                 if (zoom <= 64)
                 {
-                    zoom += 1;
+                    zoom += (64f/100f);
                 }
             }
 
@@ -208,7 +208,7 @@ namespace GameFrontEndDebugger
 
             if (e.KeyCode == Keys.NumPad3)
             {
-                transmit("{\"type\": \"place_turret\",\"x\": 500,\"y\": 500,\"timestamp\": 0}");
+                transmit("{\"type\": \"place_bunker\",\"x\": 60,\"y\": 60,\"timestamp\": 0}");
             }
 
             if (e.KeyCode == Keys.W)
@@ -240,15 +240,15 @@ namespace GameFrontEndDebugger
 
         // number of pixels a 1x1 unit takes up
 
-        private int screen_x = 500;
-        private int screen_y = 500;
-        private int zoom = 32;
+        private int screen_x = 50;
+        private int screen_y = 50;
+        private double zoom = 32;
 
         private RectangleF translateToCameraView(double x, double y, double width, double height)
         {
             RectangleF r = new RectangleF();
-            r.X = ((Width / 2) - ((float)(screen_x - x) * zoom)) - (float)(zoom * width / 2);
-            r.Y = ((Height / 2) - ((float)(screen_y - y) * zoom)) - (float)(zoom * height / 2);
+            r.X = (float)((Width / 2) - ((float)(screen_x - x) * zoom)) - (float)(zoom * width / 2);
+            r.Y = (float)(((Height / 2) - ((float)(screen_y - y) * zoom)) - (float)(zoom * height / 2));
             r.Width = (float)(zoom * width);
             r.Height = (float)(zoom * height);
             return r;
@@ -281,7 +281,8 @@ namespace GameFrontEndDebugger
                 g.FillRectangle(Brushes.Red, translateToCameraView(x, y, 1, 1));
             }
 
-            g.DrawString(string.Format("Screen Location: {0} | {1}", screen_x, screen_y), _font, Brushes.DarkRed, 5, 10);
+            g.DrawString(string.Format("Screen Location: {0} | {1}", screen_x, screen_y), _font, Brushes.DarkRed, 5, 5);
+            g.DrawString(string.Format("Zoom {0}%", zoom/64*100), _font, Brushes.DarkRed, 5, 20);
 
             g.Flush();
             g.Dispose();

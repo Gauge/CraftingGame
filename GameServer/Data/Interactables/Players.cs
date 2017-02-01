@@ -51,7 +51,7 @@ namespace GameServer.Data.Interactables
             while ( _playersToRemove.Count > 0)
             {
                 id = _playersToRemove.Dequeue();
-                game.Turrets.removeBunkerByPlayerID(id);
+                game.Bunkers.removeBunkerByPlayerID(id);
                 this.RemoveAll(p => p.PlayerID == id);
             }
         }

@@ -18,7 +18,7 @@
             Threat = 50;
 
             Stats = new StatSheet();
-            Stats.Heath = 5000;
+            Stats.Health = 5000;
             Stats.Damage = 0;
             Stats.MoveSpeed = 0;
         }
@@ -35,7 +35,7 @@
 
         public override void update(Game game)
         {
-
+            base.update(game);
         }
     }
 }

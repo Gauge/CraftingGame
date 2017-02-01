@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace GameServer.Data.Interactables
 {
@@ -12,6 +13,9 @@ namespace GameServer.Data.Interactables
         public int Width { get; set; }
         public int Height { get; set; }
         public double ActionRadious { get; }
+        public List<Player> Observers { get; set; }
+
+        private bool observerSetForUpdate { get; set; }
 
         public GameObject(int id, string name, double x, double y, double actionRadious = 3)
         {
@@ -22,6 +26,8 @@ namespace GameServer.Data.Interactables
             Y = y;
             Width = 1;
             Height = 1;
+            observerSetForUpdate = false;
+            Observers = new List<Player>();
 
             this.ActionRadious = actionRadious;
         }
@@ -35,16 +41,40 @@ namespace GameServer.Data.Interactables
             this.Y = y;
             this.Width = width;
             this.Height = height;
+            observerSetForUpdate = false;
+            Observers = new List<Player>();
 
             this.ActionRadious = actionRadious;
         }
 
         //public abstract void interact();
-        public abstract void update(Game game);
+        public virtual void update(Game game) {
 
-        public bool isInActionRange(Player p)
+            if (!observerSetForUpdate)
+            {
+                Action tempAction = new Action(this, ActionType.ENTER_PLAYER_VISION);
+                List<Player> observerList = tempAction.getEffectedPlayerIDs(game);
+
+                foreach (Player observer in observerList)
+                {
+                    if (Observers.Find(o => o.PlayerID == observer.PlayerID) == null)
+                    {
+                        game.Actions.Enqueue(tempAction);
+                        observerSetForUpdate = true;
+                    }
+                }
+            }
+        }
+
+        public void updateObservers(List<Player> players)
         {
-            return isInActionRange(p.X, p.Y);
+            Observers = players;
+            observerSetForUpdate = false;
+        }
+
+        public bool isInActionRange(GameObject o)
+        {
+            return isInActionRange(o.X, o.Y);
         }
 
         public bool isInActionRange(double a, double b)

@@ -1,9 +1,4 @@
 ﻿using GameServer.Data.Interactables.Bunkers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GameServer.Data.Interactables.Enemies
 {
@@ -21,59 +16,15 @@ namespace GameServer.Data.Interactables.Enemies
         {
             base.update(game);
 
-            foreach (Bunker t in game.Turrets)
+            foreach (Bunker t in game.Bunkers)
             {
                 if (t.isInInfluenceRadious(X, Y))
                 {
                     this.Threat.applyThreat(t, t.Threat);
                 }
             }
-
-
             Threat.update();
-
-            // basic AI
-            if (Threat.CurrentThreat != null)
-            {
-                GameObject destination = Threat.CurrentThreat.Unit;
-                if (X - destination.X < 0.001 && X - destination.X > -0.001 && (Moves[LEFT] || Moves[RIGHT]))
-                {
-                    setMove(LEFT, true);
-                    setMove(RIGHT, true);
-                }
-
-                if (Y - destination.Y < 0.001 && Y - destination.Y > -0.001 && (Moves[UP] || Moves[DOWN]))
-                {
-                    setMove(UP, true);
-                    setMove(DOWN, true);
-                }
-
-
-                if (!(X - destination.X < 0.001 && X - destination.X > -0.001))
-                {
-                    if (X - destination.X < 0 && !Moves[RIGHT])
-                    {
-                        setMove(RIGHT, false);
-                    }
-                    else if (X - destination.X > 0 && !Moves[LEFT])
-                    {
-                        setMove(LEFT, false);
-                    }
-                }
-
-                if (!(Y - destination.Y < 0.001 && Y - destination.Y > -0.001))
-                {
-                    if (Y - destination.Y < 0 && !Moves[DOWN])
-                    {
-                        setMove(DOWN, false);
-                    }
-                    else if (Y - destination.Y > 0 && !Moves[UP])
-                    {
-                        setMove(UP, false);
-                    }
-                }
-            }
-
+            AI.BasicAI(game, this);
         }
     }
 }

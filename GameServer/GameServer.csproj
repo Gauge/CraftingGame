@@ -74,10 +74,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Data\Action.cs" />
+    <Compile Include="Data\Interactables\Enemies\AI.cs" />
     <Compile Include="Data\Interactables\Enemies\Barbarian.cs" />
     <Compile Include="Data\Interactables\Enemies\Enemy.cs" />
     <Compile Include="Data\Interactables\Bunkers\Bunkers.cs" />
     <Compile Include="Data\Interactables\Bunkers\Bunker.cs" />
+    <Compile Include="Data\Interactables\Missiles\Missile.cs" />
     <Compile Include="Data\Threats.cs" />
     <Compile Include="Data\MapData\Map.cs" />
     <Compile Include="Data\Interactables\GameObjects.cs" />
@@ -97,7 +99,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="Data\TransmitionData\place_turret.json">
+    <None Include="Data\TransmitionData\place_bunker.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Data\TransmitionData\move.json">

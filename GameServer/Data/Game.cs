@@ -1,27 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using GameServer.Data.Interactables;
 using GameServer.Data.MapData;
 using GameServer.Data.Interactables.Bunkers;
-using GameServer.Data.Interactables.Enemies;
 
 namespace GameServer.Data
 {
     public class Game
     {
         public Players Players { get; private set; }
+        public GameObjects Missiles {get; private set;}
         public GameObjects Enemies { get; private set; }
-        public Bunkers Turrets { get; private set; }
+        public Bunkers Bunkers { get; private set; }
         public Map Map { get; private set; }
-        public List<Action> Actions { get; private set; }
+        public Queue<Action> Actions { get; private set; }
 
 
         public Game()
         {
-            Actions = new List<Action>();
+            Actions = new Queue<Action>();
             Players = new Players();
             Enemies = new GameObjects();
-            Turrets = new Bunkers();
+            Missiles = new GameObjects();
+            Bunkers = new Bunkers();
             Map = new Map();
             Enemies.AddRange(Map.seedBarbarians());
         }
@@ -30,15 +30,15 @@ namespace GameServer.Data
         {
             errorMessage = "";
 
-            if (Turrets.getBunkerByPlayerID(playerID) == null)
+            if (Bunkers.getBunkerByPlayerID(playerID) == null)
             {
                 Bunker t = new Bunker(playerID, x, y);
                 if (Map.verifyPlacement(t) && Enemies.getGameObjectsOverlapping(t.X, t.Y, t.Width, t.Height).Count == 0)
                 {
-                    if (!Turrets.isInNoBuildZone(t.X, t.Y))
+                    if (!Bunkers.isInNoBuildZone(t.X, t.Y))
                     {
-                        Turrets.Add(t);
-                        Actions.Add(new Action(t, Action.ActionType.MOVE_STATE_CHANGED));
+                        Bunkers.Add(t);
+                        Actions.Enqueue(new Action(t, ActionType.MOVE_STATE_CHANGED));
                         return true;
                     }
                     else
@@ -61,8 +61,9 @@ namespace GameServer.Data
         public void update()
         {
             Players.update(this);
-            Turrets.update(this);
+            Bunkers.update(this);
             Enemies.update(this);
+            Missiles.update(this);
         }
 
         public override string ToString()

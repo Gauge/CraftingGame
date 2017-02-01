@@ -5,6 +5,7 @@ using GameServer.Networking;
 using GameServer.Data;
 using Newtonsoft.Json.Linq;
 using GameServer.Data.Interactables;
+using GameServer.Data.Interactables.Missiles;
 
 namespace GameServer
 {
@@ -105,7 +106,7 @@ namespace GameServer
                 handleClientData();
                 updateClientRequests();
                 _game.update();
-                updateVision();
+                processGameActions();
                 sendDataToClients();
                 //checkForDissconnects();
 
@@ -215,7 +216,7 @@ namespace GameServer
                         move(sender, com);
                         break;
 
-                    case Transmition.TransmitionTypes.PLACE_TURRET:
+                    case Transmition.TransmitionTypes.PLACE_BUNKER:
                         place_turret(sender, com);
                         break;
                 }
@@ -291,8 +292,8 @@ namespace GameServer
 
         private void place_turret(User sender, JObject com)
         {
-            int x = com[Transmition.PlaceTurret.X].Value<int>();
-            int y = com[Transmition.PlaceTurret.Y].Value<int>();
+            int x = com[Transmition.PlaceBunker.X].Value<int>();
+            int y = com[Transmition.PlaceBunker.Y].Value<int>();
 
             string errorMessage;
             if (_game.placeBunker(sender.id, x, y, out errorMessage))
@@ -306,62 +307,82 @@ namespace GameServer
             }
         }
 
-        private void updateVision()
+
+        class ObserverBreakdown
         {
-            Dictionary<int, JObject> transmisions = new Dictionary<int, JObject>();
+            public List<Pawn> players { get; set; }
+            public List<Pawn> bunkers { get; set; }
+            public List<Pawn> enemies { get; set; }
+            public List<Missile> missiles { get; set; }
 
-            List<Player> players;
-            foreach (Data.Action a in _game.Actions)
+            public ObserverBreakdown()
             {
-                JObject jGameObject = Transmition.MapData.GameObject.Create(
-                    a.Issuer.TypeID,
-                    a.Issuer.CreationID,
-                    a.Issuer.Name,
-                    a.Issuer.X,
-                    a.Issuer.Y,
-                    a.Issuer.Width,
-                    a.Issuer.Height,
-                    a.Issuer.ActionRadious,
-                    a.Issuer.Moves.ToArray()
-                    );
+                players = new List<Pawn>();
+                bunkers = new List<Pawn>();
+                enemies = new List<Pawn>();
+                missiles = new List<Missile>();
+            }
+        }
 
+
+        private void processGameActions()
+        {
+            Dictionary<int, ObserverBreakdown> transmisions = new Dictionary<int, ObserverBreakdown>();
+            List<Player> players;
+
+            Data.Action a;
+            while (_game.Actions.Count > 0)
+            {
+                a = _game.Actions.Dequeue();
                 players = a.getEffectedPlayerIDs(_game);
                 foreach (Player p in players)
                 {
-                    if (a.Type == Data.Action.ActionType.ENTER_PLAYER_VISION &&
+                    int typeID = a.Issuer.TypeID;
+                    if (a.Type == ActionType.ENTER_PLAYER_VISION &&
                         a.Issuer.Observers.Find(o => o.CreationID == p.CreationID) != null)
                     {
                         continue;
                     }
+                    else if (a.Type == ActionType.ENTER_PLAYER_VISION || a.Type == ActionType.MOVE_STATE_CHANGED)
+                    {
+                        if (!transmisions.ContainsKey(p.PlayerID))
+                        {
+                            transmisions.Add(p.PlayerID, new ObserverBreakdown());
+                        }
 
-                    if (!transmisions.ContainsKey(p.PlayerID))
+                        switch (typeID)
+                        {
+                            case 1:
+                                transmisions[p.PlayerID].players.Add((Pawn)a.Issuer);
+                                break;
+
+                            case 100:
+                                transmisions[p.PlayerID].bunkers.Add((Pawn)a.Issuer);
+                                break;
+
+                            case 500:
+                                transmisions[p.PlayerID].missiles.Add((Missile)a.Issuer);
+                                break;
+
+                            default:
+                                transmisions[p.PlayerID].enemies.Add((Pawn)a.Issuer);
+                                break;
+                        }
+                    }
+                    else if (a.Type == ActionType.COMBAT)
                     {
-                        transmisions.Add(p.PlayerID, Transmition.MapData.Create(p.PlayerID));
+
                     }
 
-                    if (a.Issuer.TypeID == 1)
-                    {
-                        ((JArray)transmisions[p.PlayerID][Transmition.MapData.PLAYERS]).Add(jGameObject);
-                    }
-                    else if (a.Issuer.TypeID == 100)
-                    {
-                        ((JArray)transmisions[p.PlayerID][Transmition.MapData.TURRETS]).Add(jGameObject);
-                    }
-                    else
-                    {
-                        ((JArray)transmisions[p.PlayerID][Transmition.MapData.ENEMIES]).Add(jGameObject);
-                    }
                 }
                 // updates the issuer so it doesn't keep spaming new unit found!
                 a.Issuer.updateObservers(players);
             }
 
-            foreach (KeyValuePair<int, JObject> pair in transmisions)
+            foreach (KeyValuePair<int, ObserverBreakdown> pair in transmisions)
             {
-                _outGoing.Enqueue(new OutGoing(_users.Find(u => u.id == pair.Key).location, pair.Value));
+                _outGoing.Enqueue(new OutGoing(_users.Find(u => u.id == pair.Key).location, Transmition.MapData.Create(pair.Key, pair.Value.players.ToArray(), pair.Value.bunkers.ToArray(), pair.Value.enemies.ToArray(), pair.Value.missiles.ToArray())));
             }
-
-            _game.Actions.Clear();
         }
 
         private void sendDataToClients()
@@ -372,7 +393,7 @@ namespace GameServer
                 message = _outGoing.Dequeue();
                 byte[] data = Transmition.Serialize(message.data);
                 _server.broadcast(message.clients, data);
-                Logger.Log(Level.NORMAL, Transmition.GetDisplayString(message.data), message.data.ToString(Newtonsoft.Json.Formatting.None));
+                Logger.Log(Level.DEBUG, Transmition.GetDisplayString(message.data), message.data.ToString(Newtonsoft.Json.Formatting.None));
             }
         }
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GameServer.Data.Interactables.Missiles;
+using System;
 using System.Collections.Generic;
 
 namespace GameServer.Data.Interactables
@@ -11,11 +12,11 @@ namespace GameServer.Data.Interactables
         public const int RIGHT = 3;
         public const int SPEED_PER_UNIT = 100;
 
+        private bool MoveChange { get; set; }
+        private int _attackCoolDown { get; set; }
+
         public List<bool> Moves { get; protected set; }
         public StatSheet Stats { get; protected set; }
-        private bool MoveChange { get; set; }
-        private bool observerSetForUpdate { get; set; }
-        public List<Player> Observers { get; set; }
 
         public bool IsMoveing
         {
@@ -25,16 +26,26 @@ namespace GameServer.Data.Interactables
             }
         }
 
+        public bool CanAttack
+        {
+            get { return _attackCoolDown <= 0; }
+        }
+
+        public int AttackCoolDown
+        {
+            get { return _attackCoolDown <= 0 ? 0 : _attackCoolDown; }
+        }
+
         public Pawn(int id, string name, double x, double y, int width, int height) : base(id, name, x, y, width, height)
         {
             Observers = new List<Player>();
-            observerSetForUpdate = false;
             MoveChange = false;
             Moves = new List<bool> { false, false, false, false };
             Stats = new StatSheet();
-            Stats.Heath = 100;
+            Stats.Health = 100;
             Stats.Damage = 0;
             Stats.MoveSpeed = 750;
+            _attackCoolDown = 0;
         }
 
         public bool setMove(int d, bool isComplete)
@@ -64,19 +75,26 @@ namespace GameServer.Data.Interactables
             return false;
         }
 
-        public void updateObservers(List<Player> players) {
-            Observers = players;
-            observerSetForUpdate = false;
+        public Missile generateAttack(Pawn t)
+        {
+            if (CanAttack)
+            {
+                _attackCoolDown = Stats.AttackSpeed;
+                return new Missile(this, t);
+
+            }
+            return null;
         }
 
         public override void update(Game game)
         {
+            base.update(game);
             double delta = Helper.getDelta();
             double amountToMove = (((Stats.MoveSpeed / SPEED_PER_UNIT) * delta) / 1000);
 
             if (Moves[UP])
             {
-               Y = Math.Round(Y - amountToMove, 3);
+                Y = Math.Round(Y - amountToMove, 3);
             }
 
             if (Moves[DOWN])
@@ -94,22 +112,11 @@ namespace GameServer.Data.Interactables
                 X = Math.Round(X + amountToMove, 3);
             }
 
-            if (MoveChange) {
+            if (MoveChange)
+            {
                 MoveChange = false;
 
-                game.Actions.Add(new Action(this, Action.ActionType.MOVE_STATE_CHANGED));
-            }
-
-            if (!observerSetForUpdate) {
-                Action tempAction = new Action(this, Action.ActionType.ENTER_PLAYER_VISION);
-                List<Player> observerList = tempAction.getEffectedPlayerIDs(game);
-
-                foreach (Player observer in observerList) {
-                    if (Observers.Find(o => o.PlayerID == observer.PlayerID) == null) {
-                        game.Actions.Add(tempAction);
-                        observerSetForUpdate = true;
-                    }
-                }
+                game.Actions.Enqueue(new Action(this, ActionType.MOVE_STATE_CHANGED));
             }
         }
     }

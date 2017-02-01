@@ -1,4 +1,8 @@
-﻿using Newtonsoft.Json;
+﻿using GameServer.Data.Interactables;
+using GameServer.Data.Interactables.Bunkers;
+using GameServer.Data.Interactables.Enemies;
+using GameServer.Data.Interactables.Missiles;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Schema;
 using System;
@@ -10,7 +14,7 @@ namespace GameServer.Data
 {
     public static class Transmition
     {
-        private static JSchema _schema;
+        private static Dictionary<string, JSchema> SchemaLookup = new Dictionary<string, JSchema>();
 
         internal static class TransmitionTypes
         {
@@ -19,7 +23,7 @@ namespace GameServer.Data
             public const string PING = "ping";
             public const string ERROR = "error";
             public const string MOVE = "move";
-            public const string PLACE_TURRET = "place_turret";
+            public const string PLACE_BUNKER = "place_bunker";
             public const string MAP_DATA = "map_data";
 
             public static bool isTransmitionType(string type)
@@ -31,9 +35,78 @@ namespace GameServer.Data
                     type.Equals(PING) ||
                     type.Equals(ERROR) ||
                     type.Equals(MOVE) ||
-                    type.Equals(PLACE_TURRET) ||
+                    type.Equals(PLACE_BUNKER) ||
                     type.Equals(MAP_DATA)
                     );
+            }
+        }
+
+        internal static class GameObject
+        {
+            public const string TYPE_ID = "type_id";
+            public const string CREATION_ID = "creation_id";
+            public const string NAME = "name";
+            public const string X = "x";
+            public const string Y = "y";
+            public const string WIDTH = "width";
+            public const string HEIGHT = "height";
+            public const string ACTION_RADIOUS = "action_radious";
+
+
+            public static JObject Create(Interactables.GameObject gObj)
+            {
+                JObject jGameObject = new JObject();
+                jGameObject.Add(TYPE_ID, gObj.TypeID);
+                jGameObject.Add(CREATION_ID, gObj.CreationID);
+                jGameObject.Add(NAME, gObj.Name);
+                jGameObject.Add(X, gObj.X);
+                jGameObject.Add(Y, gObj.Y);
+                jGameObject.Add(WIDTH, gObj.Width);
+                jGameObject.Add(HEIGHT, gObj.Height);
+                jGameObject.Add(ACTION_RADIOUS, gObj.ActionRadious);
+
+                return jGameObject;
+            }
+        }
+
+        internal static class Pawn
+        {
+            public const string MOVES = "moves";
+            public const string STATS = "stats";
+
+            public const string HEALTH = "health";
+            public const string DAMAGE = "damage";
+            public const string MOVE_SPEED = "move_speed";
+
+            public static JObject Create(Interactables.Pawn p)
+            {
+                JObject obj = GameObject.Create(p);
+                obj.Add(MOVES, new JArray(p.Moves));
+
+                JObject obj2 = new JObject();
+                obj2.Add(HEALTH, p.Stats.Health);
+                obj2.Add(DAMAGE, p.Stats.Damage);
+                obj2.Add(MOVE_SPEED, p.Stats.MoveSpeed);
+
+                obj.Add(STATS, obj2);
+
+                return obj;
+
+            }
+
+            public static JObject Create(Interactables.Missiles.Missile p)
+            {
+                JObject obj = GameObject.Create(p);
+
+                JObject obj2 = new JObject();
+                obj2.Add(HEALTH, p.Stats.Health);
+                obj2.Add(DAMAGE, p.Stats.Damage);
+                obj2.Add(MOVE_SPEED, p.Stats.MoveSpeed);
+
+                obj.Add(STATS, obj2);
+
+                return obj;
+
             }
         }
 
@@ -126,14 +199,14 @@ namespace GameServer.Data
             }
         }
 
-        internal static class PlaceTurret
+        internal static class PlaceBunker
         {
             public static string X = "x";
             public static string Y = "y";
 
             public static JObject Create(int id, int x, int y)
             {
-                JObject obj = Base.Create(id, TransmitionTypes.PLACE_TURRET);
+                JObject obj = Base.Create(id, TransmitionTypes.PLACE_BUNKER);
                 obj.Add(X, x);
                 obj.Add(Y, y);
 
@@ -144,52 +217,47 @@ namespace GameServer.Data
         internal static class MapData
         {
             public const string PLAYERS = "players";
-            public const string TURRETS = "turrets";
+            public const string BUNKERS = "bunkers";
             public const string ENEMIES = "enemies";
+            public const string MISSILES = "missiles";
 
-            public static JObject Create(int id)
+            public static JObject Create(int id, Interactables.Pawn[] players, Interactables.Pawn[] bunkers, Interactables.Pawn[] enemies, Missile[] missiles)
             {
-                JObject obj = new JObject();
-                obj.Add(Base.TYPE, TransmitionTypes.MAP_DATA);
-                obj.Add(Base.ID, id);
-                obj.Add(Base.TIME_STAMP, Helper.getTimestamp());
-                obj.Add(PLAYERS, new JArray());
-                obj.Add(TURRETS, new JArray());
-                obj.Add(ENEMIES, new JArray());
+                JObject obj = Base.Create(id, TransmitionTypes.MAP_DATA);
 
+                JArray jPlayers = new JArray();
+                foreach (Player p in players)
+                {
+                    jPlayers.Add(Pawn.Create(p));
+                }
+
+                JArray jBunker = new JArray();
+                foreach (Bunker b in bunkers)
+                {
+                    jBunker.Add(Pawn.Create(b));
+                }
+
+                JArray jEnemies = new JArray();
+                foreach (Enemy e in enemies)
+                {
+                    jEnemies.Add(Pawn.Create(e));
+                }
+
+                JArray jMissiles = new JArray();
+                foreach (Missile m in missiles)
+                {
+                    jEnemies.Add(Pawn.Create(m));
+                }
+
+                obj.Add(PLAYERS, jPlayers);
+                obj.Add(BUNKERS, jBunker);
+                obj.Add(ENEMIES, jEnemies);
+                obj.Add(MISSILES, jMissiles);
                 return obj;
             }
-
-            internal static class GameObject
-            {
-                public const string TYPE_ID = "type_id";
-                public const string CREATION_ID = "creation_id";
-                public const string NAME = "name";
-                public const string X = "x";
-                public const string Y = "y";
-                public const string WIDTH = "width";
-                public const string HEIGHT = "height";
-                public const string ACTION_RADIOUS = "action_radious";
-                public const string MOVES = "moves";
-
-
-                public static JObject Create(int type_id, int creation_id, string name, double x, double y, int width, int height, double action_radious, bool[] moves)
-                {
-                    JObject jGameObject = new JObject();
-                    jGameObject.Add(TYPE_ID, type_id);
-                    jGameObject.Add(CREATION_ID, creation_id);
-                    jGameObject.Add(NAME, name);
-                    jGameObject.Add(X, x);
-                    jGameObject.Add(Y, y);
-                    jGameObject.Add(WIDTH, width);
-                    jGameObject.Add(HEIGHT, height);
-                    jGameObject.Add(ACTION_RADIOUS, action_radious);
-                    jGameObject.Add(MOVES, new JArray(moves));
-
-                    return jGameObject;
-                }
-            }
         }
+
+
 
         public static JObject Parse(byte[] data, out IList<string> errorMessage)
         {
@@ -201,10 +269,11 @@ namespace GameServer.Data
                     return jdata;
                 }
             }
-            catch
+            catch(Exception e)
             {
                 errorMessage = new List<string>();
                 errorMessage.Add("Failed to parse client data");
+                Logger.Log(Level.NORMAL, e.ToString());
             }
             return null;
         }
@@ -216,11 +285,15 @@ namespace GameServer.Data
 
         public static bool Validate(JObject obj, out IList<string> errorMessages)
         {
-
             if (obj["type"] != null && obj["type"].Type == JTokenType.String && TransmitionTypes.isTransmitionType((string)obj["type"]))
             {
-                JSchema schema = JSchema.Parse(File.ReadAllText(Directory.GetCurrentDirectory() + @"\Data\TransmitionData\" + (string)obj["type"] + ".json"));
-                return obj.IsValid(schema, out errorMessages);
+                string type = (string)obj["type"];
+                if (!SchemaLookup.ContainsKey(type))
+                {
+                    SchemaLookup.Add(type, JSchema.Parse(File.ReadAllText(Directory.GetCurrentDirectory() + @"\Data\TransmitionData\" + (string)obj["type"] + ".json")));
+                }
+
+                return obj.IsValid(SchemaLookup[type], out errorMessages);
             }
             else
             {
@@ -275,10 +348,10 @@ namespace GameServer.Data
                     break;
 
                 case TransmitionTypes.MAP_DATA:
-                    output = string.Format("{0}\tPlayers: {1}\tBunkers: {2}\tEnemies: {3}", baseString, ((JArray)obj[MapData.PLAYERS]).Count, ((JArray)obj[MapData.TURRETS]).Count, ((JArray)obj[MapData.ENEMIES]).Count);
+                    output = string.Format("{0}\tPlayers: {1}\tBunkers: {2}\tEnemies: {3}", baseString, ((JArray)obj[MapData.PLAYERS]).Count, ((JArray)obj[MapData.BUNKERS]).Count, ((JArray)obj[MapData.ENEMIES]).Count);
                     break;
 
-                case TransmitionTypes.PLACE_TURRET:
+                case TransmitionTypes.PLACE_BUNKER:
                     output = string.Format("{0}\tX|Y: {1} | {2}", baseString, obj[Move.X], obj[Move.Y]);
                     break;
 
